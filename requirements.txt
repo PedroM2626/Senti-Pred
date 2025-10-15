@@ -1,0 +1,28 @@
+# Dependências principais
+numpy==1.24.3
+pandas==2.0.3
+scikit-learn==1.3.0
+matplotlib==3.7.2
+seaborn==0.12.2
+nltk==3.8.1
+joblib==1.3.2
+
+# Django e REST framework para API
+django==4.2.7
+djangorestframework==3.14.0
+
+# Azure ML (para integração com Azure)
+azureml-core==1.53.0
+azureml-mlflow==1.53.0
+
+# Testes
+pytest==7.4.0
+pytest-django==4.5.2
+
+# Ferramentas de desenvolvimento
+black==23.7.0
+flake8==6.1.0
+isort==5.12.0
+
+# Documentação
+sphinx==7.1.2

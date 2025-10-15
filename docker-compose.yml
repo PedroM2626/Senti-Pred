@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  # Serviço da API Django
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      - db
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+    networks:
+      - senti-pred-network
+
+  # Serviço do banco de dados
+  db:
+    image: postgres:13
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_DB=${DB_NAME}
+    ports:
+      - "5432:5432"
+    networks:
+      - senti-pred-network
+
+  # Serviço para testes
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    command: pytest
+    depends_on:
+      - db
+    networks:
+      - senti-pred-network
+
+networks:
+  senti-pred-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

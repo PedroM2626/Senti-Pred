@@ -1,0 +1,1 @@
+# Módulo da API Django para o projeto Senti-Pred
