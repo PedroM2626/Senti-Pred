@@ -139,7 +139,8 @@ def train_model(data_path, model_save_path):
 
 if __name__ == "__main__":
     # Exemplo de uso
-    data_path = "../../data/processed/processed_data.csv"
+    # Download latest version
+    data_path = 'c:\\Users\\pedro\\Downloads\\Senti-Pred\\data\\raw\\Test.csv'
     model_path = "./sentiment_model.pkl"
     
     try:
