@@ -5,7 +5,7 @@ services:
   api:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: src/api/Dockerfile
     ports:
       - "8000:8000"
     volumes:
@@ -40,7 +40,7 @@ services:
   test:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: src/api/Dockerfile
     volumes:
       - .:/app
     env_file:

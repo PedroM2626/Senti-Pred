@@ -1,69 +1,31 @@
-# Arquivos de ambiente
-.env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-
-# Arquivos de cache Python
+# Byte-compiled / optimized / DLL files
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
+*.pyc
+*.pyd
+*.pyo
 
-# Arquivos de log
-*.log
-logs/
-
-# Arquivos de banco de dados
-*.sqlite3
-*.db
-
-# Arquivos de modelo
-*.pkl
-*.h5
-*.joblib
-
-# Arquivos de IDE
-.idea/
+# Editor directories and files
 .vscode/
+.idea/
 *.swp
-*.swo
+*~
 
-# Arquivos de sistema
+# OS-specific files
 .DS_Store
-Thumbs.db
+thumbs.db
 
-# Arquivos de relatório
-reports/relatorio_tecnico.pdf
+# Django stuff:
+*.log
+*.sqlite3
+/media
+/static
 
-# Arquivos temporários
-temp/
-tmp/
+# Virtual environment
+venv/
+env/
 
-# Arquivos de dados grandes (exceto exemplos)
-data/raw/*
-!data/raw/test.csv
-data/processed/*
-!data/processed/.gitkeep
+# Model files
+*.pkl
 
-# Arquivos de configuração local
-local_settings.py
+# Environment variables
+.env
