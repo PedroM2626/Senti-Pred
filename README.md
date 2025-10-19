@@ -4,7 +4,7 @@ Projeto de análise de sentimentos com processamento de linguagem natural e apre
 
 ## Visão Geral
 
-O Senti-Pred é um projeto de análise de sentimentos que utiliza técnicas de processamento de linguagem natural e aprendizado de máquina para classificar textos de acordo com o sentimento expresso. O projeto segue uma estratégia híbrida, utilizando Jupyter Notebooks para análise exploratória e Azure Machine Learning para treinamento e implantação de modelos.
+O Senti-Pred é um projeto de análise de sentimentos que utiliza técnicas de processamento de linguagem natural e aprendizado de máquina para classificar textos de acordo com o sentimento expresso. O projeto implementa um pipeline completo de análise de dados, desde a exploração inicial até o deploy em produção usando Docker.
 
 ## Estrutura do Projeto
 
@@ -13,25 +13,18 @@ senti-pred/
 ├── README.md
 ├── data/
 │   ├── raw/ (dados originais)
-│   └── processed/ (dados limpos)
+│   └── processed/ (dados processados)
 ├── notebooks/
-│   ├── 01_eda.ipynb (Análise exploratória)
-│   ├── 02_preprocessing.ipynb (Limpeza)
-│   ├── 03_modeling.ipynb (Modelos)
-│   └── 04_evaluation.ipynb (Avaliação)
+│   └── full_pipeline.ipynb (Pipeline completo)
 ├── src/
 │   ├── models/ (código dos modelos)
 │   ├── api/ (Django API)
-│   └── utils/ (Funções auxiliares)
+│   └── scripts/ (Scripts de processamento)
 ├── reports/
-│   ├── relatorio_tecnico.pdf
-│   └── visualizacoes/ (gráficos em R)
-├── tests/
-│   ├── unit/
-│   ├── integration/
-│   └── acceptance/
+│   ├── relatorio_tecnico.md
+│   └── visualizacoes/ (gráficos e visualizações)
 ├── requirements.txt
-└── docker-compose.yml (bonus)
+└── docker-compose.yml
 ```
 
 ## Fases do Projeto
@@ -43,14 +36,38 @@ O projeto Senti-Pred é dividido em 4 fases principais:
 3. **Modelagem**: Desenvolvimento e treinamento de modelos de análise de sentimentos.
 4. **Avaliação**: Teste e avaliação do desempenho dos modelos desenvolvidos.
 
-## Estratégia Híbrida
+## Visualizações e Resultados
 
-| Etapa do Projeto | Plataforma Recomendada | Por que é Estratégica |
-|------------------|------------------------|------------------------|
-| Análise de Dados (EDA) | Jupyter Notebook (Local) | Permite o uso de R para análise estatística aprofundada (EDA), que é um diferencial único no projeto. |
-| Treinamento e Otimização | Azure Machine Learning | Usar o AutoML e o Model Registry no Azure prova habilidades em MLOps de nível empresarial. |
-| Deployment do Modelo | Azure ML Endpoints | A melhor prática de AI Engineering é deployar o modelo diretamente na nuvem. O Azure gera a API REST segura que o Django consumirá. |
-| Backend API (Intermediário) | Django (Local ou Render/Railway) | Use Django para construir a API que faz a ponte entre o frontend e a API do Azure ML. Isso demonstra arquitetura de microsserviços. |
+### Análise Exploratória
+
+Durante a fase de análise exploratória, foram geradas visualizações para entender melhor os dados:
+
+#### Distribuição do Comprimento dos Textos
+![Comprimento dos Textos](reports/visualizacoes/text_lenght.png)
+
+#### Distribuição do Número de Palavras
+![Número de Palavras](reports/visualizacoes/number_words.png)
+
+### Avaliação de Modelos
+
+Foram implementados e avaliados diferentes modelos de machine learning:
+
+#### Comparação de Desempenho dos Modelos
+![Comparação de Modelos](reports/visualizacoes/models_comparasion.png)
+
+#### Métricas de Precisão
+![Métricas de Precisão](reports/visualizacoes/precision.png)
+
+#### Matrizes de Confusão
+
+##### Naive Bayes
+![Matriz de Confusão - Naive Bayes](reports/visualizacoes/naive_matriz.png)
+
+##### Random Forest
+![Matriz de Confusão - Random Forest](reports/visualizacoes/random-forest_matriz.png)
+
+##### Regressão Logística
+![Matriz de Confusão - Regressão Logística](reports/visualizacoes/regression_matriz.png)
 
 ## Instalação e Configuração
 
@@ -58,6 +75,7 @@ O projeto Senti-Pred é dividido em 4 fases principais:
 
 - Python 3.8+
 - Pip (gerenciador de pacotes Python)
+- Docker e Docker Compose (para deploy)
 - Virtualenv (opcional, mas recomendado)
 
 ### Instalação
@@ -87,16 +105,30 @@ O projeto Senti-Pred é dividido em 4 fases principais:
 
 ## Uso
 
-### Análise Exploratória e Pré-processamento
+### Pipeline Completo
 
-Execute os notebooks na ordem:
+Execute o notebook principal que contém todo o pipeline:
 
-1. `notebooks/01_eda.ipynb` - Análise exploratória dos dados
-2. `notebooks/02_preprocessing.ipynb` - Pré-processamento dos dados
+```bash
+jupyter notebook notebooks/full_pipeline.ipynb
+```
 
-### Treinamento de Modelos
+Este notebook contém todas as etapas do projeto:
+- Configuração inicial e carregamento de dados
+- Análise exploratória de dados (EDA)
+- Pré-processamento de texto
+- Treinamento e avaliação de modelos
+- Preparação para deploy
 
-Execute o notebook de modelagem:
+### Deploy com Docker
+
+Para implantar o modelo usando Docker:
+
+```bash
+docker-compose up -d
+```
+
+Isso iniciará a API Django que serve o modelo de análise de sentimentos.
 
 ```bash
 jupyter notebook notebooks/03_modeling.ipynb
@@ -161,4 +193,4 @@ Este projeto está licenciado sob a licença MIT - veja o arquivo LICENSE para d
 
 ## Contato
 
-Para dúvidas ou sugestões, entre em contato através de [seu-email@exemplo.com].
+Para dúvidas ou sugestões, entre em contato através de pedromoratolahoz@gmail.com.
