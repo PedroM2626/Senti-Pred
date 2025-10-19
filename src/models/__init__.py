@@ -1,1 +1,0 @@
-# Módulo de modelos para o projeto Senti-Pred
