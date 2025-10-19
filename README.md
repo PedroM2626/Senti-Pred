@@ -82,7 +82,7 @@ Foram implementados e avaliados diferentes modelos de machine learning:
 
 1. Clone o repositório:
    ```bash
-   git clone https://github.com/seu-usuario/senti-pred.git
+   git clone https://github.com/PedroM2626/Senti-Pred.git
    cd senti-pred
    ```
 
