@@ -1,0 +1,535 @@
+quero que você atualize o readme e crie outros readmes (para o readme não ficar tão gigantesco, esse será o principal e terá um readme para cada opção de executar o projeto) e crie os arquivos que estão nesse readme mas não estão no projeto, também não se esqueça de incluir o modelo do gcp exportado (para instalar ele: gsutil cp -r gs://cloud-ai-platform-2997ceed-07c7-4477-b693-ec496af20952/model-7051013037787971584 .): # Senti-Pred
+
+Projeto de análise de sentimentos com processamento de linguagem natural e aprendizado de máquina.
+
+## 🎯 Visão Geral
+
+O Senti-Pred é um sistema completo de análise de sentimentos que utiliza técnicas de processamento de linguagem natural (NLP) e aprendizado de máquina para classificar textos de acordo com o sentimento expresso. O projeto implementa um pipeline end-to-end, desde a exploração inicial dos dados até o deploy em produção utilizando **arquitetura de microservices** com separação entre API (Django) e modelo ML (GCP Vertex AI).
+
+## 🏗️ Arquitetura
+
+O projeto segue uma **arquitetura moderna de microservices**, separando responsabilidades entre camadas:
+
+```
+┌─────────────────────────────────────────────┐
+│          USUÁRIO/FRONTEND                    │
+└──────────────────┬──────────────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────────────┐
+│         API DJANGO (Docker/Cloud Run)        │
+│  • Autenticação                              │
+│  • Validação de entrada                      │
+│  • Rate limiting                             │
+│  • Business logic                            │
+│  • Logging                                   │
+└──────────────────┬──────────────────────────┘
+                   │ HTTP Request
+                   ▼
+┌─────────────────────────────────────────────┐
+│      GCP VERTEX AI (ML Endpoint)             │
+│  • Modelo de ML treinado                     │
+│  • Auto-scaling                              │
+│  • Versionamento                             │
+│  • Monitoring                                │
+└─────────────────────────────────────────────┘
+```
+
+### ✨ Por que essa arquitetura?
+
+- **Escalabilidade independente**: API e modelo escalam separadamente
+- **Separação de responsabilidades**: Cada camada tem uma função clara
+- **Facilidade de manutenção**: Modelo pode ser atualizado sem redeploy da API
+- **Gerenciamento simplificado**: GCP gerencia infraestrutura do ML
+- **Produção-ready**: Arquitetura usada por empresas modernas (Netflix, Spotify, Uber)
+
+## 📁 Estrutura do Projeto
+
+```
+senti-pred/
+├── README.md
+├── data/
+│   ├── raw/                    # Dados originais
+│   └── processed/              # Dados processados
+├── notebooks/
+│   └── full_pipeline.ipynb     # Pipeline completo (Jupyter)
+├── src/
+│   ├── scripts/                # Scripts Python modulares
+│   │   ├── 01_eda.py          # Análise exploratória
+│   │   ├── 02_preprocessing.py # Pré-processamento
+│   │   ├── 03_modeling.py      # Treinamento de modelos
+│   │   └── 04_evaluation.py    # Avaliação
+│   ├── models/                 # Modelos treinados (.pkl)
+│   └── api/                    # Django API
+│       ├── manage.py
+│       ├── settings.py
+│       └── views.py            # Endpoints da API
+├── reports/
+│   ├── relatorio_tecnico.md
+│   └── visualizacoes/          # Gráficos e visualizações
+├── requirements.txt
+├── Dockerfile
+└── docker-compose.yml
+```
+
+## 🚀 Três Formas de Executar o Projeto
+
+O Senti-Pred pode ser executado de **3 maneiras diferentes**, cada uma adequada para diferentes casos de uso:
+
+---
+
+### 📝 **Opção 1: Scripts Python Modulares** (Desenvolvimento)
+
+**Ideal para**: Desenvolvimento, experimentação, entendimento do código
+
+**Vantagens**:
+- ✅ Controle total sobre cada etapa
+- ✅ Fácil debugging
+- ✅ Modificação rápida
+- ✅ Git-friendly (diffs legíveis)
+
+**Passos**:
+
+```bash
+# 1. Instalar dependências
+pip install -r requirements.txt
+
+# 2. Executar scripts em ordem
+python src/scripts/01_eda.py
+python src/scripts/02_preprocessing.py
+python src/scripts/03_modeling.py
+python src/scripts/04_evaluation.py
+
+# 3. Build e deploy Docker local
+docker-compose up --build -d
+
+# 4. Testar API
+curl http://localhost:8000/api/predict -X POST -H "Content-Type: application/json" -d '{"text":"Produto excelente!"}'
+```
+
+**O que acontece**:
+- Dados são analisados e processados localmente
+- Modelos são treinados (Logistic Regression, Naive Bayes, Random Forest)
+- Melhor modelo é salvo em `src/models/sentiment_model.pkl`
+- Docker serve API Django com modelo local
+
+---
+
+### 📓 **Opção 2: Notebook Jupyter** (Apresentação/Acadêmico)
+
+**Ideal para**: Apresentações, trabalhos acadêmicos, exploração interativa
+
+**Vantagens**:
+- ✅ Visualizações inline
+- ✅ Documentação rica (Markdown)
+- ✅ Execução passo a passo
+- ✅ Ideal para demonstrações
+
+**Passos**:
+
+```bash
+# 1. Instalar Jupyter
+pip install jupyter
+
+# 2. Iniciar Jupyter
+jupyter notebook
+
+# 3. Abrir notebook
+# notebooks/full_pipeline.ipynb
+
+# 4. Run All Cells
+
+# 5. Deploy (última seção do notebook)
+docker-compose up --build -d
+```
+
+**O que acontece**:
+- Todo o pipeline em um único arquivo interativo
+- Gráficos e métricas visíveis imediatamente
+- Exporta modelo treinado automaticamente
+- Gera arquivos de deploy (Dockerfile, docker-compose.yml)
+
+---
+
+### ☁️ **Opção 3: GCP Vertex AI + Docker** (Produção - RECOMENDADO)
+
+**Ideal para**: Produção, portfolio profissional, escalabilidade
+
+**Vantagens**:
+- ✅ Arquitetura de microservices
+- ✅ Modelo gerenciado pelo GCP (auto-scaling, versionamento)
+- ✅ API Django separada (escalabilidade independente)
+- ✅ Zero manutenção de infraestrutura ML
+- ✅ Produção-ready
+
+**Passos**:
+
+#### **Parte 1: Treinar e Deploy do Modelo no GCP**
+
+```bash
+# 1. Garantir que dados estão processados
+python src/scripts/02_preprocessing.py
+
+# 2. Acessar GCP Vertex AI Console
+# https://console.cloud.google.com/vertex-ai
+
+# 3. Criar novo dataset
+# - Upload: data/processed/processed_data.csv
+# - Tipo: Tabular (Classification)
+# - Target: sentiment
+
+# 4. Treinar modelo
+# - AutoML ou Custom Training
+# - Configure hyperparameters
+# - Aguarde treinamento (10-30 min)
+
+# 5. Deploy modelo
+# - "Deploy to endpoint"
+# - Configure resources (1 CPU, 1GB RAM)
+# - Copie endpoint URL
+```
+
+#### **Parte 2: Configurar e Deploy da API Django**
+
+```bash
+# 1. Configurar endpoint GCP na API
+# Editar src/api/settings.py:
+GCP_VERTEX_ENDPOINT = "https://REGION-aiplatform.googleapis.com/v1/projects/PROJECT/locations/REGION/endpoints/ENDPOINT_ID:predict"
+GCP_PROJECT_ID = "seu-project-id"
+
+# 2. Adicionar credenciais GCP
+# Baixar service account key JSON
+# Colocar em: src/api/gcp-credentials.json
+
+# 3. Atualizar src/api/views.py (se necessário)
+# O código já integra com GCP automaticamente
+
+# 4. Build e deploy Docker
+docker-compose up --build -d
+
+# 5. Testar integração completa
+curl http://localhost:8000/api/predict \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"text":"Produto excelente!"}'
+```
+
+#### **Parte 3: Deploy da API no Cloud Run (Opcional)**
+
+```bash
+# 1. Instalar gcloud CLI
+# https://cloud.google.com/sdk/docs/install
+
+# 2. Autenticar
+gcloud auth login
+gcloud config set project seu-project-id
+
+# 3. Deploy API no Cloud Run
+gcloud run deploy senti-pred-api \
+  --source . \
+  --platform managed \
+  --region southamerica-east1 \
+  --allow-unauthenticated \
+  --memory 1Gi
+
+# 4. API estará disponível em:
+# https://senti-pred-api-xxxxx-rj.a.run.app
+```
+
+**O que acontece**:
+- Modelo treinado e servido pelo GCP Vertex AI (gerenciado)
+- API Django faz requisições ao endpoint GCP
+- Escalabilidade automática de ambas as camadas
+- Monitoramento via GCP Console
+- Arquitetura de produção real
+
+---
+
+## 📊 Comparação das Opções
+
+| Aspecto | Scripts Python | Notebook Jupyter | GCP + Docker |
+|---------|---------------|------------------|--------------|
+| **Complexidade** | Baixa | Média | Alta |
+| **Produção-ready** | ❌ | ❌ | ✅ |
+| **Escalabilidade** | Manual | Manual | Automática |
+| **Manutenção ML** | Você | Você | GCP |
+| **Custo** | Grátis | Grátis | Free tier (~$0) |
+| **Ideal para** | Dev/Debug | Apresentação | Portfolio/Prod |
+| **Arquitetura** | Monolito | Monolito | Microservices |
+| **Aprendizado** | Python/ML | Data Science | Cloud/DevOps |
+
+## 🎓 Fases do Projeto
+
+Independente da forma de execução, o pipeline segue estas etapas:
+
+### 1. **Análise Exploratória (EDA)**
+- Carregamento e inspeção dos dados
+- Estatísticas descritivas
+- Visualizações de distribuições
+- Identificação de padrões
+
+### 2. **Pré-processamento**
+- Limpeza de texto (URLs, menções, caracteres especiais)
+- Normalização (lowercase, remoção de números)
+- Remoção de stopwords (palavras irrelevantes)
+- Lematização (redução à forma base)
+- Atribuição de sentimentos
+
+### 3. **Modelagem**
+- **Logistic Regression**: Baseline linear
+- **Naive Bayes**: Probabilístico para texto
+- **Random Forest**: Ensemble de árvores
+- Vetorização TF-IDF
+- Treinamento e validação (80/20 split)
+
+### 4. **Avaliação**
+- Métricas: Accuracy, Precision, Recall, F1-Score
+- Matrizes de confusão
+- Comparação de modelos
+- Seleção do melhor modelo
+
+## 📈 Visualizações e Resultados
+
+### Análise Exploratória
+
+#### Distribuição do Comprimento dos Textos
+![Comprimento dos Textos](reports/visualizacoes/text_lenght.png)
+
+#### Distribuição do Número de Palavras
+![Número de Palavras](reports/visualizacoes/number_words.png)
+
+### Avaliação de Modelos
+
+#### Comparação de Desempenho dos Modelos
+![Comparação de Modelos](reports/visualizacoes/models_comparasion.png)
+
+#### Métricas de Precisão
+![Métricas de Precisão](reports/visualizacoes/precision.png)
+
+### Matrizes de Confusão
+
+| Naive Bayes | Random Forest | Regressão Logística |
+|-------------|---------------|---------------------|
+| ![Naive Bayes](reports/visualizacoes/naive_matriz.png) | ![Random Forest](reports/visualizacoes/random-forest_matriz.png) | ![Regression](reports/visualizacoes/regression_matriz.png) |
+
+## 🛠️ Instalação e Configuração
+
+### Pré-requisitos
+
+- **Python 3.8+**
+- **Pip** (gerenciador de pacotes Python)
+- **Docker e Docker Compose** (para deploy)
+- **Conta Google Cloud** (para Opção 3)
+- **gcloud CLI** (para deploy GCP)
+- **Virtualenv** (opcional, mas recomendado)
+
+### Instalação Base
+
+```bash
+# 1. Clone o repositório
+git clone https://github.com/PedroM2626/Senti-Pred.git
+cd senti-pred
+
+# 2. Crie ambiente virtual (recomendado)
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+
+# 3. Instale dependências
+pip install -r requirements.txt
+
+# 4. Configure variáveis de ambiente
+cp .env.example .env
+# Edite .env com suas configurações
+```
+
+### Configuração para GCP (Opção 3)
+
+```bash
+# 1. Instalar gcloud CLI
+# https://cloud.google.com/sdk/docs/install
+
+# 2. Autenticar
+gcloud auth login
+
+# 3. Criar projeto GCP
+gcloud projects create senti-pred-projeto --name="Senti-Pred"
+gcloud config set project senti-pred-projeto
+
+# 4. Habilitar APIs
+gcloud services enable aiplatform.googleapis.com
+gcloud services enable run.googleapis.com
+
+# 5. Criar service account
+gcloud iam service-accounts create senti-pred-sa \
+  --display-name="Senti-Pred Service Account"
+
+# 6. Download credenciais
+gcloud iam service-accounts keys create src/api/gcp-credentials.json \
+  --iam-account=senti-pred-sa@senti-pred-projeto.iam.gserviceaccount.com
+
+# 7. Dar permissões
+gcloud projects add-iam-policy-binding senti-pred-projeto \
+  --member="serviceAccount:senti-pred-sa@senti-pred-projeto.iam.gserviceaccount.com" \
+  --role="roles/aiplatform.user"
+```
+
+## 🧪 Testes
+
+### Testar API Local (Docker)
+
+```bash
+# Health check
+curl http://localhost:8000/health
+
+# Predição
+curl -X POST http://localhost:8000/api/predict \
+  -H "Content-Type: application/json" \
+  -d '{"text": "Este produto é excelente!"}'
+```
+
+### Testar API no GCP Cloud Run
+
+```bash
+# Substituir URL pela sua
+curl -X POST https://senti-pred-api-xxxxx-rj.a.run.app/api/predict \
+  -H "Content-Type: application/json" \
+  -d '{"text": "Este produto é excelente!"}'
+```
+
+### Testes Unitários
+
+```bash
+# Rodar todos os testes
+pytest tests/
+
+# Apenas unit tests
+pytest tests/unit/
+
+# Com cobertura
+pytest --cov=src tests/
+```
+
+## 📦 Tecnologias Utilizadas
+
+### Machine Learning
+- **scikit-learn**: Modelos de ML (Logistic Regression, Naive Bayes, Random Forest)
+- **NLTK**: Processamento de linguagem natural
+- **pandas**: Manipulação de dados
+- **numpy**: Operações numéricas
+
+### API e Deploy
+- **Django**: Framework web para API REST
+- **Docker**: Containerização
+- **GCP Vertex AI**: Treinamento e deploy de modelos gerenciados
+- **GCP Cloud Run**: Hosting serverless da API
+
+### Visualização e Análise
+- **matplotlib**: Visualizações
+- **seaborn**: Gráficos estatísticos
+- **Jupyter**: Notebooks interativos
+
+## 🎯 Casos de Uso
+
+- ✅ **E-commerce**: Análise de reviews de produtos
+- ✅ **Redes Sociais**: Monitoramento de sentimento de marca
+- ✅ **Atendimento ao Cliente**: Triagem automática de feedbacks
+- ✅ **Pesquisas**: Análise de respostas abertas
+- ✅ **Marketing**: Avaliação de campanhas
+
+## 🤝 Contribuição
+
+Contribuições são bem-vindas! Para contribuir:
+
+1. Fork o projeto
+2. Crie uma branch para sua feature (`git checkout -b feature/nova-feature`)
+3. Commit suas mudanças (`git commit -am 'Adiciona nova feature'`)
+4. Push para a branch (`git push origin feature/nova-feature`)
+5. Abra um Pull Request
+
+## 📄 Licença
+
+Este projeto está licenciado sob a licença MIT - veja o arquivo [LICENSE](LICENSE) para detalhes.
+
+## 👤 Autor
+
+**Pedro Morato Lahoz**
+
+- Email: pedromoratolahoz@gmail.com
+- GitHub: [@PedroM2626](https://github.com/PedroM2626)
+- LinkedIn: [Pedro Morato Lahoz](https://linkedin.com/in/pedro-morato-lahoz)
+
+## 🙏 Agradecimentos
+
+- Comunidade NLTK pelo framework de NLP
+- Equipe scikit-learn pelos modelos de ML
+- Google Cloud Platform pela infraestrutura gerenciada
+- Comunidade open-source
+
+---
+
+**⭐ Se este projeto foi útil, considere dar uma estrela no GitHub!**
+
+## 📚 Documentação Adicional
+
+- [Relatório Técnico](reports/relatorio_tecnico.md)
+- [Documentação da API](docs/api.md)
+- [Guia de Deploy GCP](docs/gcp-deployment.md)
+- [Troubleshooting](docs/troubleshooting.md) 
+
+
+
+os dados do gcp (ia deployada) são: ponto de extremidade: gora é possível executar consultas usando a interface de linha de comando (CLI).
+
+Verifique se você tem o SDK do Google Cloud  instalado.
+Execute o comando a seguir para fazer a autenticação com sua conta do Google.
+$
+gcloud auth application-default login
+Crie um objeto JSON para armazenar seus dados tabulares.
+{
+  "instances": [
+    { "feature_column_a": "value", "feature_column_b": "value", ... },
+    { "feature_column_a": "value", "feature_column_b": "value", ... },
+    ...
+  ]
+}
+Crie variáveis de ambiente para armazenar o endpoint e IDs de projetos, bem como seu objeto JSON.
+$
+ENDPOINT_ID="7585617581445218304"
+PROJECT_ID="996695513494"
+INPUT_DATA_FILE="INPUT-JSON"
+Execute a solicitação.
+$
+curl \
+-X POST \
+-H "Authorization: Bearer $(gcloud auth print-access-token)" \
+-H "Content-Type: application/json" \
+"https://us-central1-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/us-central1/endpoints/${ENDPOINT_ID}:predict" \
+-d "@${INPUT_DATA_FILE}"
+inferência em lote: ID
+2987581398581248000
+Modelo
+Senti-pred (Versão 1)
+Objetivo
+Tabular
+Importar local
+gs://cloud-ai-platform-2997ceed-07c7-4477-b693-ec496af20952/processed_data.csv
+Total de itens
+2728
+Itens previstos
+2728
+Criado em
+out. 19, 2025 at 05:13PM
+Atualizado
+out. 19, 2025 at 05:33PM
+Tempo decorrido
+15 min 49 s
+Status
+Concluído
+Registros
+Mostrar registros
+Exportar local
+gs://cloud-ai-platform-2997ceed-07c7-4477-b693-ec496af20952/prediction-Senti-pred-2025_10_19T13_13_00_530Z
+Tipo de criptografia
+Gerenciado pelo Google
+Inferências processadas
+2.728 concluídos, 0 com falha
