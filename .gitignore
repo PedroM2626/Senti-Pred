@@ -29,3 +29,10 @@ env/
 
 # Environment variables
 .env
+
+# R and R Shiny files
+.Rhistory
+.Rdata
+.Rproj
+*.Rproj.user
+r_shiny/data/

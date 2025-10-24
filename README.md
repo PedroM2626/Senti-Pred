@@ -19,6 +19,9 @@ O projeto pode ser executado de três maneiras principais, cada uma com sua pró
 3.  **GCP Vertex AI + Docker**: Para deploy em ambiente de produção utilizando a infraestrutura do Google Cloud Platform e Docker.
     -   Veja o guia completo em: [README_gcp.md](README_gcp.md)
 
+4.  **Dashboard Interativo R Shiny**: Para análise exploratória de dados (EDA) interativa dos dados brutos, processados e de previsão.
+    -   Veja o guia completo em: [README_r.md](README_r.md)
+
 ## Estrutura do Projeto
 
 ```
@@ -27,9 +30,12 @@ senti-pred/
 ├── README_scripts.md
 ├── README_jupyter.md
 ├── README_gcp.md
+├── README_r.md
 ├── data/
 │   ├── raw/ (dados originais)
 │   └── processed/ (dados processados)
+├── r_shiny/
+│   └── app.R (Aplicativo R Shiny)
 ├── notebooks/
 │   └── full_pipeline.ipynb (Pipeline completo)
 ├── src/
