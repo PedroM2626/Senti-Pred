@@ -76,9 +76,9 @@ ui <- dashboardPage(
 server <- function(input, output) {
   
   # Load Data
-  raw_data_path <- "../data/raw/Test.csv"
-  processed_data_path <- "../data/processed/processed_data.csv"
-  predictions_data_path <- "../data/processed/predictions.csv" # Assumindo que o arquivo de previsões estará aqui quando existir
+  raw_data_path <- "data/raw/Test.csv"
+  processed_data_path <- "data/processed/processed_data.csv"
+  predictions_data_path <- "data/processed/predictions.csv" # Assumindo que o arquivo de previsões estará aqui quando existir
 
   raw_data_reactive <- reactive({
     data <- tryCatch(read_csv(raw_data_path, show_col_types = FALSE), error = function(e) {

@@ -6,6 +6,10 @@ Este guia detalha como configurar e executar o dashboard interativo de Análise 
 
 O dashboard R Shiny oferece uma interface interativa para explorar os dados brutos, processados e as previsões geradas pelo modelo de análise de sentimentos. Ele permite visualizar distribuições, tendências e outras métricas importantes de forma dinâmica, facilitando a compreensão e a validação dos dados e resultados.
 
+## Deploy Online
+
+Este dashboard está deployado e disponível publicamente em: <mcurl name="https://pedrom2626.shinyapps.io/r_shiny/" url="https://pedrom2626.shinyapps.io/r_shiny/"></mcurl>
+
 ## Estrutura do Projeto R
 
 ```
