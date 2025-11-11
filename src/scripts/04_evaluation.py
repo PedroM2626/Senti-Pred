@@ -11,6 +11,7 @@ import joblib
 import os
 import sys
 from sklearn.model_selection import train_test_split
+import json # Importar o módulo json
 
 # Configurações de visualização
 plt.style.use('ggplot')
@@ -52,6 +53,7 @@ except:
 
 # Relatório de classificação detalhado
 print("Relatório de Classificação:")
+report = classification_report(y_test, y_pred, output_dict=True)
 print(classification_report(y_test, y_pred))
 
 # Acurácia
@@ -59,14 +61,25 @@ accuracy = accuracy_score(y_test, y_pred)
 print(f"Acurácia: {accuracy:.4f}")
 
 # Matriz de confusão
-plt.figure(figsize=(10, 8))
 cm = confusion_matrix(y_test, y_pred)
+plt.figure(figsize=(10, 8))
 sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=model.classes_, yticklabels=model.classes_)
 plt.title('Matriz de Confusão')
 plt.xlabel('Predito')
 plt.ylabel('Real')
 plt.tight_layout()
-plt.show()
+# plt.show() # Comentar para evitar que o script exiba o gráfico automaticamente
+
+# Salvar a matriz de confusão como imagem
+plt.savefig('reports/metrics/confusion_matrix.png')
+plt.close() # Fechar a figura para liberar memória
+
+metrics = {
+    "accuracy": accuracy,
+    "classification_report": report,
+    "confusion_matrix": cm.tolist(), # Converter numpy array para lista para serialização JSON
+    "model_classes": model.classes_.tolist()
+}
 
 # Curvas ROC e Precision-Recall (para problemas binários)
 if has_probabilities and len(model.classes_) == 2:
@@ -85,6 +98,12 @@ if has_probabilities and len(model.classes_) == 2:
     plt.title('Curva ROC')
     plt.legend(loc="lower right")
     
+    metrics["roc_curve"] = {
+        "fpr": fpr.tolist(),
+        "tpr": tpr.tolist(),
+        "auc": roc_auc
+    }
+
     # Curva Precision-Recall
     plt.subplot(1, 2, 2)
     precision, recall, _ = precision_recall_curve(y_test, y_prob[:, 1], pos_label='positive')
@@ -95,7 +114,16 @@ if has_probabilities and len(model.classes_) == 2:
     plt.ylim([0.0, 1.05])
     
     plt.tight_layout()
-    plt.show()
+    # plt.show() # Comentar para evitar que o script exiba o gráfico automaticamente
+    plt.savefig('reports/metrics/roc_pr_curve.png')
+    plt.close() # Fechar a figura para liberar memória
+
+# Salvar métricas em um arquivo JSON
+metrics_path = 'reports/metrics/model_metrics.json'
+with open(metrics_path, 'w') as f:
+    json.dump(metrics, f, indent=4)
+
+print(f"Métricas do modelo salvas em: {metrics_path}")
 
 ## Análise de Erros
 

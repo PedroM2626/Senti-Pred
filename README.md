@@ -23,6 +23,12 @@ O projeto pode ser executado de três maneiras principais, cada uma com sua pró
     -   Veja o guia completo em: [README_r.md](README_r.md)
     -   **Deploy Online**: O dashboard está disponível publicamente em: <mcurl name="https://pedrom2626.shinyapps.io/r_shiny/" url="https://pedrom2626.shinyapps.io/r_shiny/"></mcurl>
 
+5.  **Dashboard de Métricas Streamlit**: Para visualizar as métricas de avaliação do modelo de forma interativa.
+    -   **Execução Local**:
+        1.  Certifique-se de ter o Streamlit instalado (`pip install streamlit`).
+        2.  Navegue até o diretório `streamlit_dashboard`: `cd streamlit_dashboard`
+        3.  Execute o dashboard: `streamlit run app.py`
+
 ## Estrutura do Projeto
 
 ```
