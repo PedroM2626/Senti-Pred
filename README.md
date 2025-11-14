@@ -105,6 +105,39 @@ senti-pred/
 
 Este projeto está licenciado sob a licença MIT - veja o arquivo LICENSE para detalhes.
 
-## Contato
+## Agente de Geração de Testes Unitários
 
-Para dúvidas ou sugestões, entre em contato através de pedromoratolahoz@gmail.com.
+Este projeto inclui um agente de IA que gera testes unitários para código Python usando a biblioteca `pytest` e o Azure OpenAI.
+
+### Como Usar o Agente de Testes
+
+1.  **Configurar Variáveis de Ambiente**:
+    Crie um arquivo `.env` no diretório `test_agent` (se ainda não existir) e adicione as seguintes variáveis, substituindo os valores pelos seus dados do Azure OpenAI:
+
+    ```
+    AZURE_OPENAI_ENDPOINT=your_azure_openai_endpoint
+    AZURE_OPENAI_API_KEY=your_azure_openai_api_key
+    AZURE_OPENAI_DEPLOYMENT_NAME=your_azure_openai_deployment_name
+    ```
+
+    Você pode usar o arquivo `.env.example` como base.
+
+2.  **Preparar o Código para Testar**:
+    Coloque o código Python para o qual você deseja gerar testes no arquivo `example_code.py` dentro do diretório `test_agent`.
+
+3.  **Executar o Agente**:
+    Navegue até o diretório `test_agent` e execute o script `agent.py`:
+
+    ```bash
+    cd test_agent
+    python agent.py
+    ```
+
+    O agente irá gerar um arquivo de testes chamado `test_example_code.py` no mesmo diretório.
+
+4.  **Rodar os Testes Gerados**:
+    Para executar os testes gerados, certifique-se de ter o `pytest` instalado (`pip install pytest`) e execute:
+
+    ```bash
+    pytest test_example_code.py
+    ```
