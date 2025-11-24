@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import os
 import sys
+from pathlib import Path
 
 # Download dos recursos do NLTK
 nltk.download('punkt', quiet=True)
@@ -21,8 +22,22 @@ nltk.download('wordnet', quiet=True)
 nltk.download('punkt_tab', quiet=True)
 nltk.download('rslp', quiet=True)
 
-# Carregar os dados
-data_path = r'c:\Users\pedro\Downloads\Senti-Pred\data\raw\Test.csv' # Usando o caminho local
+# Carregar os dados (procura automática em `data/raw` para ser portátil)
+project_root = Path(__file__).resolve().parents[2]
+raw_dir = project_root / 'data' / 'raw'
+
+def find_raw_csv():
+    candidates = ['test.csv', 'Test.csv', 'Test.CSV']
+    for name in candidates:
+        p = raw_dir / name
+        if p.exists():
+            return p
+    files = list(raw_dir.glob('*.csv'))
+    if files:
+        return files[0]
+    raise FileNotFoundError(f"Nenhum arquivo CSV encontrado em {raw_dir}")
+
+data_path = find_raw_csv()
 df = pd.read_csv(data_path)
 
 # Exibir as primeiras linhas
@@ -91,9 +106,10 @@ if 'Product_Description' in df.columns:
     # Atribuir sentimento
     df_processed['sentiment'] = df_processed['Product_Description'].apply(assign_sentiment)
     
-    # Salvar dados processados
-    processed_path = r'c:\Users\pedro\Downloads\Senti-Pred\data\processed\processed_data.csv' # Usando o caminho local
-    os.makedirs(os.path.dirname(processed_path), exist_ok=True)
+    # Salvar dados processados em `data/processed` (relativo ao repositório)
+    processed_dir = project_root / 'data' / 'processed'
+    processed_dir.mkdir(parents=True, exist_ok=True)
+    processed_path = processed_dir / 'processed_data.csv'
     df_processed.to_csv(processed_path, index=False)
     print(f"Dados processados salvos em: {processed_path}")
 

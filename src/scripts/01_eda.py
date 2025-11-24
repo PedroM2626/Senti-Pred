@@ -8,15 +8,30 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import os
 import sys
+from pathlib import Path
 
 # Configurações de visualização
 plt.style.use('ggplot')
 sns.set(style='whitegrid')
 # %matplotlib inline (Este comando é específico de IPython/Jupyter e será removido ou comentado)
 
-# Carregar os dados
-# data_path = kagglehub.dataset_download("akash14/product-sentiment-classification") # Removido conforme discussão anterior
-data_path = 'c:\\Users\\pedro\\Downloads\\Senti-Pred\\data\\raw\\Test.csv' # Usando o caminho local
+# Carregar os dados (procura automática em `data/raw` para ser portátil)
+project_root = Path(__file__).resolve().parents[2]
+raw_dir = project_root / 'data' / 'raw'
+
+def find_raw_csv():
+    # Preferências comuns, depois pega o primeiro .csv disponível
+    candidates = ['test.csv', 'Test.csv', 'Test.CSV']
+    for name in candidates:
+        p = raw_dir / name
+        if p.exists():
+            return p
+    files = list(raw_dir.glob('*.csv'))
+    if files:
+        return files[0]
+    raise FileNotFoundError(f"Nenhum arquivo CSV encontrado em {raw_dir}")
+
+data_path = find_raw_csv()
 df = pd.read_csv(data_path)
 
 # Exibir as primeiras linhas

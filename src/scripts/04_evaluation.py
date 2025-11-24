@@ -10,6 +10,7 @@ from sklearn.metrics import classification_report, confusion_matrix, accuracy_sc
 import joblib
 import os
 import sys
+from pathlib import Path
 from sklearn.model_selection import train_test_split
 import json # Importar o módulo json
 
@@ -18,13 +19,18 @@ plt.style.use('ggplot')
 sns.set(style='whitegrid')
 # %matplotlib inline (Este comando é específico de IPython/Jupyter e será removido ou comentado)
 
-# Carregar o modelo treinado
-model_path = 'c:\\Users\\pedro\\Downloads\\Senti-Pred\\src\\models\\sentiment_model.pkl' # Usando o caminho local
-model = joblib.load(model_path)
+# Carregar o modelo treinado e os dados processados usando caminhos relativos
+project_root = Path(__file__).resolve().parents[2]
+model_path = project_root / 'src' / 'models' / 'sentiment_model.pkl'
+if not model_path.exists():
+    raise FileNotFoundError(f"Modelo não encontrado: {model_path}")
+model = joblib.load(str(model_path))
 print(f"Modelo carregado: {type(model).__name__}")
 
 # Carregar os dados de teste
-processed_path = 'c:\\Users\\pedro\\Downloads\\Senti-Pred\\data\\processed\\processed_data.csv' # Usando o caminho local
+processed_path = project_root / 'data' / 'processed' / 'processed_data.csv'
+if not processed_path.exists():
+    raise FileNotFoundError(f"Dados processados não encontrados: {processed_path}")
 df = pd.read_csv(processed_path)
 
 # Dividir em conjuntos de treino e teste (usando a mesma semente para consistência)
@@ -70,8 +76,10 @@ plt.ylabel('Real')
 plt.tight_layout()
 # plt.show() # Comentar para evitar que o script exiba o gráfico automaticamente
 
-# Salvar a matriz de confusão como imagem
-plt.savefig('reports/metrics/confusion_matrix.png')
+# Salvar a matriz de confusão como imagem (garantir diretório)
+metrics_dir = project_root / 'reports' / 'metrics'
+metrics_dir.mkdir(parents=True, exist_ok=True)
+plt.savefig(str(metrics_dir / 'confusion_matrix.png'))
 plt.close() # Fechar a figura para liberar memória
 
 metrics = {
@@ -115,12 +123,12 @@ if has_probabilities and len(model.classes_) == 2:
     
     plt.tight_layout()
     # plt.show() # Comentar para evitar que o script exiba o gráfico automaticamente
-    plt.savefig('reports/metrics/roc_pr_curve.png')
+    plt.savefig(str(metrics_dir / 'roc_pr_curve.png'))
     plt.close() # Fechar a figura para liberar memória
 
 # Salvar métricas em um arquivo JSON
-metrics_path = 'reports/metrics/model_metrics.json'
-with open(metrics_path, 'w') as f:
+metrics_path = metrics_dir / 'model_metrics.json'
+with metrics_path.open('w') as f:
     json.dump(metrics, f, indent=4)
 
 print(f"Métricas do modelo salvas em: {metrics_path}")

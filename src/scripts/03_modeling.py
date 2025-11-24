@@ -16,14 +16,18 @@ from sklearn.ensemble import RandomForestClassifier
 import joblib
 import os
 import sys
+from pathlib import Path
 
 # Configurações de visualização
 plt.style.use('ggplot')
 sns.set(style='whitegrid')
 # %matplotlib inline (Este comando é específico de IPython/Jupyter e será removido ou comentado)
 
-# Carregar os dados processados
-processed_path = 'c:\\Users\\pedro\\Downloads\\Senti-Pred\\data\\processed\\processed_data.csv' # Usando o caminho local
+# Carregar os dados processados (caminho relativo ao repositório)
+project_root = Path(__file__).resolve().parents[2]
+processed_path = project_root / 'data' / 'processed' / 'processed_data.csv'
+if not processed_path.exists():
+    raise FileNotFoundError(f"Arquivo de dados processados não encontrado: {processed_path}")
 df = pd.read_csv(processed_path)
 
 # Exibir as primeiras linhas
@@ -152,10 +156,10 @@ best_model_name = max(accuracies, key=accuracies.get)
 best_model = models[best_model_name][0]
 print(f"Melhor modelo: {best_model_name} com acurácia de {accuracies[best_model_name]:.4f}")
 
-# Salvar o modelo
-model_path = 'c:\\Users\\pedro\\Downloads\\Senti-Pred\\src\\models\\sentiment_model.pkl' # Usando o caminho local
-os.makedirs(os.path.dirname(model_path), exist_ok=True)
-joblib.dump(best_model, model_path)
+# Salvar o modelo (em `src/models` do repositório)
+model_path = project_root / 'src' / 'models' / 'sentiment_model.pkl'
+model_path.parent.mkdir(parents=True, exist_ok=True)
+joblib.dump(best_model, str(model_path))
 print(f"Modelo salvo em: {model_path}")
 
 ## Conclusões da Modelagem
