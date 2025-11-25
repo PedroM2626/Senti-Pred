@@ -94,16 +94,56 @@ print("Carregando dados...")
 
 # Carregue o dataset do Kaggle usando `kagglehub`.
 # Ajuste `file_path` se quiser carregar um arquivo específico dentro do dataset.
-# Exemplo: file_path = "data/train.csv" ou simplesmente file_path = "" para carregar o padrão.
-file_path = ""  # editar conforme necessário
+# Exemplo: file_path = "data/train.csv" ou simplesmente file_path = "" para tentar nomes comuns.
+user_file_path = "data/raw/test.csv"  # editar conforme necessário
+dataset_handle = "jp797498e/twitter-entity-sentiment-analysis"
 
-df = kagglehub.load_dataset(
-    KaggleDatasetAdapter.PANDAS,
-    "jp797498e/twitter-entity-sentiment-analysis",
-    file_path,
-)
+# Lista de nomes de arquivos comuns a serem tentados dentro do dataset
+candidates = []
+if user_file_path and str(user_file_path).strip():
+    candidates.append(user_file_path)
+candidates += [
+    'train.csv', 'test.csv', 'data.csv', 'tweets.csv', 'twitter_entity_sentiment.csv',
+    'train.tsv', 'test.tsv', 'data.jsonl', 'data.json', 'train.parquet', 'data.parquet'
+]
 
-print(f"[OK] Dados carregados: {df.shape[0]} registros e {df.shape[1]} colunas")
+os.makedirs('../data/raw', exist_ok=True)
+
+loaded = False
+last_error = None
+for candidate in candidates:
+    try:
+        candidate_display = candidate or '<root>'
+        print(f"Tentando carregar arquivo do dataset: '{candidate_display}'")
+        df = kagglehub.load_dataset(
+            KaggleDatasetAdapter.PANDAS,
+            dataset_handle,
+            candidate,
+        )
+        print(f"[OK] Dados carregados: {df.shape[0]} registros e {df.shape[1]} colunas (via '{candidate_display}')")
+        # Salvar localmente para reuso
+        local_name = os.path.basename(candidate) if candidate else 'dataset.csv'
+        local_path = os.path.join('../data/raw', local_name)
+        try:
+            df.to_csv(local_path, index=False)
+            print(f"[OK] Arquivo salvo em: {local_path}")
+            DATA_RAW = local_path
+        except Exception:
+            # fallback: manter DATA_RAW apontando para a variável original caso não consiga salvar
+            print('[WARN] Não foi possível salvar arquivo localmente, o dataframe será usado em memória.')
+            DATA_RAW = None
+        loaded = True
+        break
+    except Exception as e:
+        print(f"Falha ao carregar '{candidate_display}': {e}")
+        last_error = e
+
+if not loaded:
+    raise RuntimeError(
+        "Não foi possível carregar nenhum dos arquivos tentados do dataset. "
+        "Edite `user_file_path` com o caminho correto dentro do dataset ou baixe manualmente para '../data/raw/'. "
+        f"Erro último: {last_error}"
+    )
 
 # Exibir primeiras linhas (compatível com notebook)
 print("\nPrimeiras 5 linhas do dataset:")
