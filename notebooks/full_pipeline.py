@@ -18,6 +18,7 @@ import os
 import re
 import json
 import warnings
+import time
 import joblib
 import numpy as np
 import pandas as pd
@@ -117,7 +118,6 @@ plt.close()
 # top words (raw) — useful before preprocessing
 all_words = ' '.join(df[text_col].astype(str)).lower().split()
 top_raw = pd.Series(all_words).value_counts().head(20)
-top_raw.to_csv(os.path.join(VIS_DIR, 'top_words_raw.csv'))
 plt.figure(figsize=(12, 5))
 top_raw.plot(kind='bar')
 plt.title('Top words (raw)')
@@ -196,9 +196,7 @@ df_val_proc['text_clean'] = df_val_proc['text'].apply(clean_text)
 df_val_proc['text_no_stop'] = df_val_proc['text_clean'].apply(remove_stopwords_en)
 df_val_proc['text_lemmatized'] = df_val_proc['text_no_stop'].apply(lemmatize_text_en)
 
-df_train_proc.to_csv(TRAIN_PROCESSED, index=False)
-df_val_proc.to_csv(VAL_PROCESSED, index=False)
-print(f"[OK] Dados processados salvos: {TRAIN_PROCESSED} | {VAL_PROCESSED}")
+print(f"[OK] Pré-processamento concluído (dados mantidos em memória)")
 
 # -----------------------------
 # Modelagem: treinar com train -> predizer validation
@@ -233,8 +231,17 @@ for name, clf in models.items():
         ('tfidf', TfidfVectorizer(max_features=15000, ngram_range=(1,2))),
         ('clf', clf)
     ])
+    # Medir tempo de treinamento
+    t0 = time.time()
     pipe.fit(X_train, y_train)
+    t1 = time.time()
+    train_time = t1 - t0
+
+    # Medir tempo de predição (opcional)
+    t0p = time.time()
     preds = pipe.predict(X_val)
+    t1p = time.time()
+    predict_time = t1p - t0p
 
     acc = accuracy_score(y_val, preds)
     f1 = f1_score(y_val, preds, average='macro')
@@ -279,60 +286,16 @@ for name, clf in models.items():
         'f1_macro': f1,
         'roc_auc_macro': roc_auc_macro,
         'average_precision_macro': avg_precision_macro,
+        'train_time_seconds': train_time,
+        'predict_time_seconds': predict_time,
         'report': report,
-        'confusion_matrix': cm.tolist()
+            'confusion_matrix': cm.tolist(),
+            'y_score': y_score
     }
 
     print(f"[RESULT] {name} — Accuracy: {acc:.4f} | F1-macro: {f1:.4f} | ROC-AUC(macro): {str(roc_auc_macro)} | AP(macro): {str(avg_precision_macro)}")
     print(classification_report(y_val, preds))
-
-    # Confusion matrix
-    plt.figure(figsize=(6, 5))
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
-                xticklabels=classes, yticklabels=classes)
-    plt.title(f'Confusion matrix — {name}')
-    plt.xlabel('Predito')
-    plt.ylabel('Real')
-    plt.tight_layout()
-    plt.savefig(os.path.join(VIS_DIR, f'confusion_{name}.png'))
-    plt.close()
-
-    # Plot ROC and Precision-Recall curves when possible
-    if y_score is not None and y_score.shape[1] == y_val_b.shape[1]:
-        # ROC curves per class
-        plt.figure(figsize=(8, 6))
-        for i, cls in enumerate(classes):
-            try:
-                fpr, tpr, _ = roc_curve(y_val_b[:, i], y_score[:, i])
-                auc_val = np.trapz(tpr, fpr)
-                plt.plot(fpr, tpr, label=f'class {cls} (AUC={auc_val:.3f})')
-            except Exception:
-                continue
-        plt.plot([0, 1], [0, 1], 'k--', linewidth=0.5)
-        plt.xlabel('False Positive Rate')
-        plt.ylabel('True Positive Rate')
-        plt.title(f'ROC Curves — {name} (macro AUC={roc_auc_macro})')
-        plt.legend(loc='lower right')
-        plt.tight_layout()
-        plt.savefig(os.path.join(VIS_DIR, f'roc_{name}.png'))
-        plt.close()
-
-        # Precision-Recall per class
-        plt.figure(figsize=(8, 6))
-        for i, cls in enumerate(classes):
-            try:
-                precision, recall, _ = precision_recall_curve(y_val_b[:, i], y_score[:, i])
-                ap = average_precision_score(y_val_b[:, i], y_score[:, i])
-                plt.plot(recall, precision, label=f'class {cls} (AP={ap:.3f})')
-            except Exception:
-                continue
-        plt.xlabel('Recall')
-        plt.ylabel('Precision')
-        plt.title(f'Precision-Recall Curves — {name} (AP macro={avg_precision_macro})')
-        plt.legend(loc='lower left')
-        plt.tight_layout()
-        plt.savefig(os.path.join(VIS_DIR, f'pr_{name}.png'))
-        plt.close()
+        # não salvar plots individuais por modelo aqui; plots comparativos serão gerados após o loop
 
 # Escolher melhor por F1-macro
 best = max(results.keys(), key=lambda k: results[k]['f1_macro'])
@@ -354,6 +317,8 @@ for k in results:
         'f1_macro': results[k]['f1_macro'],
         'roc_auc_macro': results[k].get('roc_auc_macro'),
         'average_precision_macro': results[k].get('average_precision_macro'),
+        'train_time_seconds': results[k].get('train_time_seconds'),
+        'predict_time_seconds': results[k].get('predict_time_seconds'),
         'classification_report': results[k]['report'],
         'confusion_matrix': results[k]['confusion_matrix']
     }
@@ -362,12 +327,113 @@ with open(os.path.join(METRICS_DIR, 'model_metrics.json'), 'w') as f:
     json.dump(metrics_out, f, indent=2)
 print(f"[OK] Métricas salvas em: {os.path.join(METRICS_DIR, 'model_metrics.json')}")
 
+# Gerar gráficos comparativos (um único ROC com todas as modelos, um único PR, e
+# uma figura com as matrizes de confusão lado a lado). Não geramos mais CSV resumo.
+print('\n[COMPARISON PLOTS] Gerando gráficos comparativos: ROC, PR e Confusion matrices')
+
+# classes e etiqueta binarizada (mesma ordem para todos os modelos)
+classes_all = np.unique(y_val)
+y_val_b_all = label_binarize(y_val, classes=classes_all)
+
+# --- ROC comparativo (micro/macro averaged via ravel) ---
+plt.figure(figsize=(8, 6))
+plotted_any = False
+for name in results:
+    y_score = results[name].get('y_score')
+    if y_score is None:
+        continue
+    try:
+        # micro-averaged curve across classes (ravel)
+        fpr, tpr, _ = roc_curve(y_val_b_all.ravel(), y_score.ravel())
+        auc_val = None
+        try:
+            auc_val = roc_auc_score(y_val_b_all, y_score, average='macro', multi_class='ovr')
+        except Exception:
+            auc_val = None
+        label = f"{name}"
+        if auc_val is not None:
+            label += f" (AUC={auc_val:.3f})"
+        plt.plot(fpr, tpr, lw=2, label=label)
+        plotted_any = True
+    except Exception:
+        continue
+if plotted_any:
+    plt.plot([0, 1], [0, 1], 'k--', linewidth=0.5)
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('Comparative ROC Curves (all models)')
+    plt.legend(loc='lower right')
+    plt.tight_layout()
+    roc_path = os.path.join(VIS_DIR, 'comparison_roc.png')
+    plt.savefig(roc_path)
+    plt.close()
+    print(f"[OK] ROC comparativo salvo em: {roc_path}")
+else:
+    print('[WARN] Nenhum score disponível para plotting ROC comparativo')
+
+# --- Precision-Recall comparativo ---
+plt.figure(figsize=(8, 6))
+plotted_any = False
+for name in results:
+    y_score = results[name].get('y_score')
+    if y_score is None:
+        continue
+    try:
+        precision, recall, _ = precision_recall_curve(y_val_b_all.ravel(), y_score.ravel())
+        ap = None
+        try:
+            ap = average_precision_score(y_val_b_all, y_score, average='macro')
+        except Exception:
+            ap = None
+        label = f"{name}"
+        if ap is not None:
+            label += f" (AP={ap:.3f})"
+        plt.plot(recall, precision, lw=2, label=label)
+        plotted_any = True
+    except Exception:
+        continue
+if plotted_any:
+    plt.xlabel('Recall')
+    plt.ylabel('Precision')
+    plt.title('Comparative Precision-Recall Curves (all models)')
+    plt.legend(loc='lower left')
+    plt.tight_layout()
+    pr_path = os.path.join(VIS_DIR, 'comparison_pr.png')
+    plt.savefig(pr_path)
+    plt.close()
+    print(f"[OK] Precision-Recall comparativo salvo em: {pr_path}")
+else:
+    print('[WARN] Nenhum score disponível para plotting Precision-Recall comparativo')
+
+# --- Confusion matrices lado a lado ---
+model_names = list(results.keys())
+n_models = len(model_names)
+cms = [np.array(results[nm]['confusion_matrix']) for nm in model_names]
+if len(cms) > 0:
+    vmax = max(cm.max() for cm in cms)
+    fig, axes = plt.subplots(1, n_models, figsize=(6 * n_models, 5))
+    if n_models == 1:
+        axes = [axes]
+    for ax, nm, cm in zip(axes, model_names, cms):
+        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
+                    xticklabels=classes_all, yticklabels=classes_all,
+                    vmin=0, vmax=vmax, ax=ax)
+        ax.set_title(f'Confusion — {nm}')
+        ax.set_xlabel('Predito')
+        ax.set_ylabel('Real')
+    plt.tight_layout()
+    cm_path = os.path.join(VIS_DIR, 'comparison_confusion_matrices.png')
+    plt.savefig(cm_path)
+    plt.close()
+    print(f"[OK] Matrizes de confusão comparativas salvas em: {cm_path}")
+else:
+    print('[WARN] Nenhuma matriz de confusão disponível para plotagem')
+
 # -----------------------------
 # Análises finais (distribuições e top-words pós-processamento)
 # -----------------------------
 print('\n[ANALYSIS] Gerando distribuições e top-words')
 dist = pd.concat([df_train_proc.assign(split='train'), df_val_proc.assign(split='validation')]).groupby(['split', 'sentiment']).size().unstack(fill_value=0)
-dist.to_csv(os.path.join(VIS_DIR, 'sentiment_distribution_by_split.csv'))
 plt.figure(figsize=(8, 5))
 dist.plot(kind='bar', stacked=True)
 plt.title('Distribuição de Sentimentos por Split')
@@ -380,7 +446,6 @@ def top_words(series, n=20):
     return pd.Series(allw).value_counts().head(n)
 
 top_overall = top_words(pd.concat([df_train_proc['text_lemmatized'], df_val_proc['text_lemmatized']]))
-top_overall.to_csv(os.path.join(VIS_DIR, 'top_words_overall.csv'))
 plt.figure(figsize=(12, 5))
 top_overall.plot(kind='bar')
 plt.title('Top words (processed)')
@@ -390,7 +455,6 @@ plt.close()
 
 for split_name, dframe in [('train', df_train_proc), ('validation', df_val_proc)]:
     tw = top_words(dframe['text_lemmatized'])
-    tw.to_csv(os.path.join(VIS_DIR, f'top_words_{split_name}.csv'))
     plt.figure(figsize=(12, 5))
     tw.plot(kind='bar')
     plt.title(f'Top words ({split_name})')
