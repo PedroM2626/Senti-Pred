@@ -36,8 +36,10 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.svm import LinearSVC
 from sklearn.metrics import (
-    classification_report, confusion_matrix, accuracy_score, f1_score
+    classification_report, confusion_matrix, accuracy_score, f1_score,
+    roc_auc_score, roc_curve, precision_recall_curve, average_precision_score
 )
+from sklearn.preprocessing import label_binarize
 
 warnings.filterwarnings('ignore')
 sns.set(style='whitegrid')
@@ -239,26 +241,98 @@ for name, clf in models.items():
     report = classification_report(y_val, preds, output_dict=True)
     cm = confusion_matrix(y_val, preds)
 
+    # Prepare scores for ROC/PR (one-vs-rest). Binarize labels
+    classes = np.unique(y_val)
+    y_val_b = label_binarize(y_val, classes=classes)
+
+    # Try to obtain scores: prefer predict_proba, fall back to decision_function
+    y_score = None
+    try:
+        y_score = pipe.predict_proba(X_val)
+    except Exception:
+        try:
+            decision = pipe.decision_function(X_val)
+            # If binary, make it 2D
+            if decision.ndim == 1:
+                decision = np.vstack([-decision, decision]).T
+            y_score = decision
+        except Exception:
+            y_score = None
+
+    roc_auc_macro = None
+    avg_precision_macro = None
+    # Compute ROC AUC and Average Precision (macro) when scores available
+    if y_score is not None and y_score.shape[1] == y_val_b.shape[1]:
+        try:
+            roc_auc_macro = roc_auc_score(y_val_b, y_score, average='macro', multi_class='ovr')
+        except Exception:
+            roc_auc_macro = None
+        try:
+            # average_precision_score supports multilabel indicator
+            avg_precision_macro = average_precision_score(y_val_b, y_score, average='macro')
+        except Exception:
+            avg_precision_macro = None
+
     results[name] = {
         'pipeline': pipe,
         'accuracy': acc,
         'f1_macro': f1,
+        'roc_auc_macro': roc_auc_macro,
+        'average_precision_macro': avg_precision_macro,
         'report': report,
         'confusion_matrix': cm.tolist()
     }
 
-    print(f"[RESULT] {name} — Accuracy: {acc:.4f} | F1-macro: {f1:.4f}")
+    print(f"[RESULT] {name} — Accuracy: {acc:.4f} | F1-macro: {f1:.4f} | ROC-AUC(macro): {str(roc_auc_macro)} | AP(macro): {str(avg_precision_macro)}")
     print(classification_report(y_val, preds))
 
+    # Confusion matrix
     plt.figure(figsize=(6, 5))
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
-                xticklabels=np.unique(y_val), yticklabels=np.unique(y_val))
+                xticklabels=classes, yticklabels=classes)
     plt.title(f'Confusion matrix — {name}')
     plt.xlabel('Predito')
     plt.ylabel('Real')
     plt.tight_layout()
     plt.savefig(os.path.join(VIS_DIR, f'confusion_{name}.png'))
     plt.close()
+
+    # Plot ROC and Precision-Recall curves when possible
+    if y_score is not None and y_score.shape[1] == y_val_b.shape[1]:
+        # ROC curves per class
+        plt.figure(figsize=(8, 6))
+        for i, cls in enumerate(classes):
+            try:
+                fpr, tpr, _ = roc_curve(y_val_b[:, i], y_score[:, i])
+                auc_val = np.trapz(tpr, fpr)
+                plt.plot(fpr, tpr, label=f'class {cls} (AUC={auc_val:.3f})')
+            except Exception:
+                continue
+        plt.plot([0, 1], [0, 1], 'k--', linewidth=0.5)
+        plt.xlabel('False Positive Rate')
+        plt.ylabel('True Positive Rate')
+        plt.title(f'ROC Curves — {name} (macro AUC={roc_auc_macro})')
+        plt.legend(loc='lower right')
+        plt.tight_layout()
+        plt.savefig(os.path.join(VIS_DIR, f'roc_{name}.png'))
+        plt.close()
+
+        # Precision-Recall per class
+        plt.figure(figsize=(8, 6))
+        for i, cls in enumerate(classes):
+            try:
+                precision, recall, _ = precision_recall_curve(y_val_b[:, i], y_score[:, i])
+                ap = average_precision_score(y_val_b[:, i], y_score[:, i])
+                plt.plot(recall, precision, label=f'class {cls} (AP={ap:.3f})')
+            except Exception:
+                continue
+        plt.xlabel('Recall')
+        plt.ylabel('Precision')
+        plt.title(f'Precision-Recall Curves — {name} (AP macro={avg_precision_macro})')
+        plt.legend(loc='lower left')
+        plt.tight_layout()
+        plt.savefig(os.path.join(VIS_DIR, f'pr_{name}.png'))
+        plt.close()
 
 # Escolher melhor por F1-macro
 best = max(results.keys(), key=lambda k: results[k]['f1_macro'])
@@ -269,8 +343,21 @@ print(f"\n[OK] Melhor modelo: {best} (F1-macro={results[best]['f1_macro']:.4f})"
 joblib.dump(best_pipeline, MODEL_PATH)
 print(f"[OK] Modelo salvo em: {MODEL_PATH}")
 
-# Salvar métricas
-metrics_out = {'best_model': best, 'results': {k: {'accuracy': results[k]['accuracy'], 'f1_macro': results[k]['f1_macro'], 'report': results[k]['report']} for k in results}}
+# Salvar métricas detalhadas por modelo
+metrics_out = {
+    'best_model': best,
+    'results': {}
+}
+for k in results:
+    metrics_out['results'][k] = {
+        'accuracy': results[k]['accuracy'],
+        'f1_macro': results[k]['f1_macro'],
+        'roc_auc_macro': results[k].get('roc_auc_macro'),
+        'average_precision_macro': results[k].get('average_precision_macro'),
+        'classification_report': results[k]['report'],
+        'confusion_matrix': results[k]['confusion_matrix']
+    }
+
 with open(os.path.join(METRICS_DIR, 'model_metrics.json'), 'w') as f:
     json.dump(metrics_out, f, indent=2)
 print(f"[OK] Métricas salvas em: {os.path.join(METRICS_DIR, 'model_metrics.json')}")
