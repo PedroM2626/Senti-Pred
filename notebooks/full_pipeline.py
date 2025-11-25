@@ -47,7 +47,6 @@ sns.set(style='whitegrid')
 
 print("[START] full_pipeline.py — EDA, Preprocess (EN), Modeling")
 
-
 # `BASE_DIR` aponta para a raiz do repositório (pai da pasta `notebooks`)
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 

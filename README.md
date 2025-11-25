@@ -11,6 +11,11 @@ O Senti-Pred é um projeto de análise de sentimentos que utiliza técnicas de p
 O projeto pode ser executado de três maneiras principais, cada uma com sua própria documentação detalhada:
 
 1.  **Scripts Python Modulares**: Para uma execução mais controlada e modular, ideal para integração em outros sistemas ou automação.
+    -   Os scripts atualizados estão em `src/scripts/` e seguem a divisão em etapas:
+        - `01_eda.py` — Análise exploratória e geração de PNGs em `reports/visualizacoes/`.
+        - `02_preprocessing.py` — Pré-processamento em inglês; gera um artefato binário em `data/processed/processed_data.pkl`.
+        - `03_modeling.py` — Treina modelos a partir do pickle processado, salva o melhor em `src/models/sentiment_model.pkl`, gera métricas JSON e gráficos comparativos (ROC/PR/confusion) em `reports/visualizacoes/`.
+        - `04_evaluation.py` — Avaliação do modelo salvo; gera imagens e `reports/metrics/model_metrics.json`.
     -   Veja o guia completo em: [README_scripts.md](README_scripts.md)
 
 2.  **Notebook Jupyter**: Para uma exploração interativa e desenvolvimento passo a passo do pipeline completo.

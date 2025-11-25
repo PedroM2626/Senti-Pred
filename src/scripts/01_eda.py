@@ -1,84 +1,91 @@
-# Análise Exploratória de Dados (EDA) - Senti-Pred
-# Este notebook contém a análise exploratória dos dados para o projeto Senti-Pred, focado em análise de sentimentos.
+"""01_eda.py
 
-# Importações necessárias
+Script de Análise Exploratória (EDA) para o projeto Senti-Pred.
+
+Gera gráficos PNG em `reports/visualizacoes/` com visualizações úteis antes do
+pré-processamento (distribuição de comprimentos, distribuição de sentimentos,
+top-words brutas, etc.).
+"""
+
+from pathlib import Path
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import os
-import sys
-from pathlib import Path
 
-# Configurações de visualização
-plt.style.use('ggplot')
 sns.set(style='whitegrid')
-# %matplotlib inline (Este comando é específico de IPython/Jupyter e será removido ou comentado)
 
-# Carregar os dados (procura automática em `data/raw` para ser portátil)
-project_root = Path(__file__).resolve().parents[2]
-raw_dir = project_root / 'data' / 'raw'
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+RAW_DIR = PROJECT_ROOT / 'data' / 'raw'
+VIS_DIR = PROJECT_ROOT / 'reports' / 'visualizacoes'
+os.makedirs(VIS_DIR, exist_ok=True)
 
-def find_raw_csv():
-    # Preferências comuns, depois pega o primeiro .csv disponível
-    candidates = ['test.csv', 'Test.csv', 'Test.CSV']
-    for name in candidates:
-        p = raw_dir / name
-        if p.exists():
-            return p
-    files = list(raw_dir.glob('*.csv'))
-    if files:
-        return files[0]
-    raise FileNotFoundError(f"Nenhum arquivo CSV encontrado em {raw_dir}")
+def find_raw_files():
+    files = list(RAW_DIR.glob('*.csv'))
+    if not files:
+        raise FileNotFoundError(f'Nenhum arquivo CSV encontrado em {RAW_DIR}')
+    # prefer explicit train/validation if present
+    train = RAW_DIR / 'twitter_training.csv'
+    val = RAW_DIR / 'twitter_validation.csv'
+    if train.exists() and val.exists():
+        return train, val
+    if len(files) >= 2:
+        return files[0], files[1]
+    return files[0], None
 
-data_path = find_raw_csv()
-df = pd.read_csv(data_path)
+def load_combined():
+    train_path, val_path = find_raw_files()
+    cols = ['tweet_id', 'entity', 'sentiment', 'text']
+    df_train = pd.read_csv(train_path, names=cols, header=None, engine='python', encoding='utf-8')
+    if val_path is not None:
+        df_val = pd.read_csv(val_path, names=cols, header=None, engine='python', encoding='utf-8')
+    else:
+        df_val = pd.DataFrame(columns=cols)
+    df_train['split'] = 'train'
+    df_val['split'] = 'validation'
+    df = pd.concat([df_train, df_val], ignore_index=True)
+    return df, df_train, df_val
 
-# Exibir as primeiras linhas
-df.head()
+def run_eda():
+    df, df_train, df_val = load_combined()
+    print(f'Loaded: train={len(df_train)} | validation={len(df_val)} | total={len(df)}')
 
-# Informações básicas sobre o dataset
-print("Formato do dataset:", df.shape)
-print("\nInformações do dataset:")
-df.info()
-print("\nEstatísticas descritivas:")
-df.describe(include='all')
+    # Head and info
+    print(df.head())
+    print(df.info())
 
-# Verificar valores ausentes
-missing_values = df.isnull().sum()
-missing_percentage = (missing_values / len(df)) * 100
-
-missing_df = pd.DataFrame({
-    'Valores ausentes': missing_values,
-    'Porcentagem (%)': missing_percentage
-})
-
-missing_df[missing_df['Valores ausentes'] > 0]
-
-# Análise de distribuição de sentimentos (supondo que exista uma coluna 'sentiment')
-if 'sentiment' in df.columns:
-    plt.figure(figsize=(10, 6))
-    sns.countplot(x='sentiment', data=df)
-    plt.title('Distribuição de Sentimentos')
-    plt.xlabel('Sentimento')
-    plt.ylabel('Contagem')
-    plt.xticks(rotation=45)
+    # text length distribution
+    text_col = 'text'
+    df['text_length'] = df[text_col].astype(str).apply(lambda s: len(s.split()))
+    plt.figure(figsize=(10, 5))
+    sns.histplot(df['text_length'], bins=40, kde=True)
+    plt.title('Distribuição de comprimento de texto')
+    plt.xlabel('Número de palavras')
     plt.tight_layout()
-    plt.show()
+    plt.savefig(VIS_DIR / 'text_length.png')
+    plt.close()
 
-# Análise de comprimento de texto (supondo que exista uma coluna 'text')
-if 'Product_Description' in df.columns:
-    df['text_length'] = df['Product_Description'].apply(len)
-    
-    plt.figure(figsize=(12, 6))
-    sns.histplot(df['text_length'], bins=50, kde=True)
-    plt.title('Distribuição do Comprimento de Texto')
-    plt.xlabel('Comprimento do Texto')
-    plt.ylabel('Frequência')
+    # top words raw
+    all_words = ' '.join(df[text_col].astype(str)).lower().split()
+    top_raw = pd.Series(all_words).value_counts().head(20)
+    plt.figure(figsize=(12, 5))
+    top_raw.plot(kind='bar')
+    plt.title('Top words (raw)')
     plt.tight_layout()
-    plt.show()
-    
-    # Conclusões da Análise Exploratória
-# - Resumo das principais descobertas
-# - Insights para o pré-processamento
-# - Direcionamentos para a modelagem
+    plt.savefig(VIS_DIR / 'top_words_raw.png')
+    plt.close()
+
+    # sentiment distribution
+    if 'sentiment' in df.columns:
+        plt.figure(figsize=(8, 5))
+        sns.countplot(x='sentiment', data=df)
+        plt.title('Distribuição de Sentimentos (combined)')
+        plt.tight_layout()
+        plt.savefig(VIS_DIR / 'sentiment_distribution.png')
+        plt.close()
+
+    print('[OK] EDA concluída — gráficos salvos em reports/visualizacoes')
+
+if __name__ == '__main__':
+    run_eda()

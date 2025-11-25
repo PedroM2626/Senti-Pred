@@ -1,151 +1,112 @@
-# Pré-processamento de Dados - Senti-Pred
-# Este notebook contém as etapas de pré-processamento dos dados para o projeto Senti-Pred.
+"""02_preprocessing.py
 
-# Importações necessárias
+Pré-processamento modularizado — implementa o pré-processamento em inglês usado
+no `full_pipeline.py`. Gera um artefato binário (pickle/joblib) em
+`data/processed/processed_data.pkl` contendo o DataFrame processado.
+"""
+
+from pathlib import Path
+import re
+import os
+import joblib
 import pandas as pd
 import numpy as np
-import re
 import nltk
-from nltk.corpus import stopwords
+from nltk.corpus import stopwords, wordnet
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
-import matplotlib.pyplot as plt
-import seaborn as sns
-import os
-import sys
-from pathlib import Path
 
-# Download dos recursos do NLTK
-nltk.download('punkt', quiet=True)
-nltk.download('stopwords', quiet=True)
-nltk.download('wordnet', quiet=True)
-nltk.download('punkt_tab', quiet=True)
-nltk.download('rslp', quiet=True)
+nltk_resources = ['punkt', 'stopwords', 'wordnet', 'omw-1.4', 'averaged_perceptron_tagger']
+for r in nltk_resources:
+    try:
+        nltk.download(r, quiet=True)
+    except Exception:
+        pass
 
-# Carregar os dados (procura automática em `data/raw` para ser portátil)
-project_root = Path(__file__).resolve().parents[2]
-raw_dir = project_root / 'data' / 'raw'
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+RAW_DIR = PROJECT_ROOT / 'data' / 'raw'
+PROCESSED_DIR = PROJECT_ROOT / 'data' / 'processed'
+VIS_DIR = PROJECT_ROOT / 'reports' / 'visualizacoes'
+os.makedirs(PROCESSED_DIR, exist_ok=True)
+os.makedirs(VIS_DIR, exist_ok=True)
 
-def find_raw_csv():
-    candidates = ['test.csv', 'Test.csv', 'Test.CSV']
-    for name in candidates:
-        p = raw_dir / name
-        if p.exists():
-            return p
-    files = list(raw_dir.glob('*.csv'))
-    if files:
-        return files[0]
-    raise FileNotFoundError(f"Nenhum arquivo CSV encontrado em {raw_dir}")
+LEMMATIZER = WordNetLemmatizer()
 
-data_path = find_raw_csv()
-df = pd.read_csv(data_path)
-
-# Exibir as primeiras linhas
-df.head()
-
-# Funções de pré-processamento
 def clean_text(text):
-    if isinstance(text, str):
-        # Converter para minúsculas
-        text = text.lower()
-        # Remover URLs
-        text = re.sub(r'http\\S+|www\\S+|https\\S+', '', text, flags=re.MULTILINE)
-        # Remover menções e hashtags
-        text = re.sub(r'@\\w+|#\\w+', '', text)
-        # Remover pontuação e caracteres especiais
-        text = re.sub(r'[^\\w\\s]', '', text)
-        # Remover números
-        text = re.sub(r'\\d+', '', text)
-        # Remover espaços extras
-        text = re.sub(r'\\s+', ' ', text).strip()
-        return text
-    return ''
+    if not isinstance(text, str):
+        return ''
+    text = text.lower()
+    text = re.sub(r'http\S+|www\S+|https\S+', '', text)
+    text = re.sub(r'@\w+|#\w+', '', text)
+    text = re.sub(r'[^\w\s]', '', text)
+    text = re.sub(r'\d+', '', text)
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
 
-def remove_stopwords(text):
-    if isinstance(text, str):
-        stop_words = set(stopwords.words('portuguese'))
-        word_tokens = word_tokenize(text, language='portuguese')
-        filtered_text = [word for word in word_tokens if word not in stop_words]
-        return ' '.join(filtered_text)
-    return ''
+def remove_stopwords_en(text):
+    if not isinstance(text, str):
+        return ''
+    stop_words = set(stopwords.words('english'))
+    tokens = word_tokenize(text, language='english')
+    filtered = [w for w in tokens if w.lower() not in stop_words]
+    return ' '.join(filtered)
 
-def lemmatize_text(text):
-    if isinstance(text, str):
-        lemmatizer = WordNetLemmatizer()
-        word_tokens = word_tokenize(text, language='portuguese')
-        lemmatized_text = [lemmatizer.lemmatize(word) for word in word_tokens]
-        return ' '.join(lemmatized_text)
-    return ''
+def lemmatize_text_en(text):
+    if not isinstance(text, str):
+        return ''
+    tokens = word_tokenize(text, language='english')
+    try:
+        pos_tags = nltk.pos_tag(tokens)
+    except Exception:
+        pos_tags = [(t, '') for t in tokens]
 
-def assign_sentiment(text):
-    if isinstance(text, str):
-        text = text.lower()
-        positive_keywords = ['bom', 'ótimo', 'excelente', 'incrível', 'feliz', 'gostei', 'amo', 'recomendo']
-        negative_keywords = ['ruim', 'péssimo', 'terrível', 'odeio', 'não gostei', 'decepcionado', 'problema']
-        
-        if any(word in text for word in positive_keywords):
-            return 'positive'
-        elif any(word in text for word in negative_keywords):
-            return 'negative'
-    return 'neutral'
+    def _get_wordnet_pos(tag):
+        if tag.startswith('J'):
+            return wordnet.ADJ
+        if tag.startswith('V'):
+            return wordnet.VERB
+        if tag.startswith('N'):
+            return wordnet.NOUN
+        if tag.startswith('R'):
+            return wordnet.ADV
+        return wordnet.NOUN
 
-# Aplicar pré-processamento
-if 'Product_Description' in df.columns:
-    # Criar cópia do dataframe original
-    df_processed = df.copy()
-    
-    # Aplicar limpeza de texto
-    df_processed['text_clean'] = df_processed['Product_Description'].apply(clean_text)
-    
-    # Remover stopwords
-    df_processed['text_no_stopwords'] = df_processed['text_clean'].apply(remove_stopwords)
-    
-    # Lematização
-    df_processed['text_lemmatized'] = df_processed['text_no_stopwords'].apply(lemmatize_text)
-    
-    # Atribuir sentimento
-    df_processed['sentiment'] = df_processed['Product_Description'].apply(assign_sentiment)
-    
-    # Salvar dados processados em `data/processed` (relativo ao repositório)
-    processed_dir = project_root / 'data' / 'processed'
-    processed_dir.mkdir(parents=True, exist_ok=True)
-    processed_path = processed_dir / 'processed_data.csv'
-    df_processed.to_csv(processed_path, index=False)
-    print(f"Dados processados salvos em: {processed_path}")
+    lemmas = []
+    for token, tag in pos_tags:
+        wn_tag = _get_wordnet_pos(tag) if tag else wordnet.NOUN
+        lemmas.append(LEMMATIZER.lemmatize(token, wn_tag))
+    return ' '.join(lemmas)
 
-    # Análise dos Dados Processados
-    # Vamos analisar algumas estatísticas dos dados após o pré-processamento.
+def find_raw_files():
+    files = list(RAW_DIR.glob('*.csv'))
+    if not files:
+        raise FileNotFoundError(f'Nenhum arquivo CSV encontrado em {RAW_DIR}')
+    train = RAW_DIR / 'twitter_training.csv'
+    val = RAW_DIR / 'twitter_validation.csv'
+    if train.exists() and val.exists():
+        return train, val
+    if len(files) >= 2:
+        return files[0], files[1]
+    return files[0], None
 
-    if 'Product_Description' in df.columns and 'text_lemmatized' in df_processed.columns:
-        # Comprimento dos textos antes e depois do processamento
-        df_processed['original_length'] = df_processed['Product_Description'].apply(lambda x: len(x.split()) if isinstance(x, str) else 0)
-        df_processed['processed_length'] = df_processed['text_lemmatized'].apply(lambda x: len(x.split()) if isinstance(x, str) else 0)
-        
-        # Visualizar a redução no comprimento dos textos
-        plt.figure(figsize=(12, 6))
-        
-        plt.subplot(1, 2, 1)
-        sns.histplot(df_processed['original_length'], bins=30, kde=True, color='blue')
-        plt.title('Distribuição do Comprimento Original')
-        plt.xlabel('Número de Palavras')
-        plt.ylabel('Frequência')
-        
-        plt.subplot(1, 2, 2)
-        sns.histplot(df_processed['processed_length'], bins=30, kde=True, color='green')
-        plt.title('Distribuição do Comprimento Após Processamento')
-        plt.xlabel('Número de Palavras')
-        
-        plt.tight_layout()
-        plt.show()
-        
-        # Estatísticas da redução
-        reduction = ((df_processed['original_length'] - df_processed['processed_length']) / df_processed['original_length']) * 100
-        print(f"Redução média no comprimento do texto: {reduction.mean():.2f}%")
+def run_preprocessing():
+    train_path, val_path = find_raw_files()
+    cols = ['tweet_id', 'entity', 'sentiment', 'text']
+    df_train = pd.read_csv(train_path, names=cols, header=None, engine='python', encoding='utf-8')
+    df_val = pd.read_csv(val_path, names=cols, header=None, engine='python', encoding='utf-8') if val_path is not None else pd.DataFrame(columns=cols)
 
-    # Conclusões do Pré-processamento
-    # - Resumo das transformações aplicadas
-    # - Impacto do pré-processamento nos dados
-    # - Próximos passos para a modelagem
-else:
-    print("Erro: A coluna 'Product_Description' não foi encontrada no DataFrame. Certifique-se de que o arquivo CSV contém a coluna 'Product_Description'.")
-    sys.exit(1)
+    df_train['text_clean'] = df_train['text'].apply(clean_text)
+    df_train['text_no_stop'] = df_train['text_clean'].apply(remove_stopwords_en)
+    df_train['text_lemmatized'] = df_train['text_no_stop'].apply(lemmatize_text_en)
+
+    df_val['text_clean'] = df_val['text'].apply(clean_text)
+    df_val['text_no_stop'] = df_val['text_clean'].apply(remove_stopwords_en)
+    df_val['text_lemmatized'] = df_val['text_no_stop'].apply(lemmatize_text_en)
+
+    # Salvar objeto binário (pickle) para uso pelos scripts seguintes
+    out_path = PROCESSED_DIR / 'processed_data.pkl'
+    joblib.dump({'train': df_train, 'validation': df_val}, out_path)
+    print(f'[OK] Dados processados salvos (pickle): {out_path}')
+
+if __name__ == '__main__':
+    run_preprocessing()

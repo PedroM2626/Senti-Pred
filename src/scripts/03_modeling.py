@@ -1,168 +1,206 @@
-# Modelagem - Senti-Pred
-# Este notebook contém o desenvolvimento e treinamento dos modelos de análise de sentimentos para o projeto Senti-Pred.
+"""03_modeling.py
 
-# Importações necessárias
-import pandas as pd
+Treina os modelos a partir dos dados pré-processados (pickle gerado por
+`02_preprocessing.py`), calcula métricas, gera os gráficos comparativos (ROC,
+PR e matrizes de confusão) e salva o melhor pipeline em
+`src/models/sentiment_model.pkl`. Salva métricas detalhadas em JSON em
+`reports/metrics/model_metrics.json`.
+"""
+
+from pathlib import Path
+import os
+import joblib
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.model_selection import train_test_split, GridSearchCV
-from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
+import time
+
 from sklearn.pipeline import Pipeline
-from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
+from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.naive_bayes import MultinomialNB
-from sklearn.ensemble import RandomForestClassifier
-import joblib
-import os
-import sys
-from pathlib import Path
+from sklearn.svm import LinearSVC
+from sklearn.metrics import (
+    classification_report, confusion_matrix, accuracy_score, f1_score,
+    roc_auc_score, roc_curve, precision_recall_curve, average_precision_score
+)
+from sklearn.preprocessing import label_binarize
 
-# Configurações de visualização
-plt.style.use('ggplot')
 sns.set(style='whitegrid')
-# %matplotlib inline (Este comando é específico de IPython/Jupyter e será removido ou comentado)
 
-# Carregar os dados processados (caminho relativo ao repositório)
-project_root = Path(__file__).resolve().parents[2]
-processed_path = project_root / 'data' / 'processed' / 'processed_data.csv'
-if not processed_path.exists():
-    raise FileNotFoundError(f"Arquivo de dados processados não encontrado: {processed_path}")
-df = pd.read_csv(processed_path)
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PROCESSED_DIR = PROJECT_ROOT / 'data' / 'processed'
+METRICS_DIR = PROJECT_ROOT / 'reports' / 'metrics'
+VIS_DIR = PROJECT_ROOT / 'reports' / 'visualizacoes'
+MODEL_DIR = PROJECT_ROOT / 'src' / 'models'
+os.makedirs(METRICS_DIR, exist_ok=True)
+os.makedirs(VIS_DIR, exist_ok=True)
+os.makedirs(MODEL_DIR, exist_ok=True)
 
-# Exibir as primeiras linhas
-df.head()
+def load_processed():
+    p = PROCESSED_DIR / 'processed_data.pkl'
+    if not p.exists():
+        raise FileNotFoundError(f'Processed data not found: {p}. Execute 02_preprocessing.py first')
+    obj = joblib.load(p)
+    return obj['train'], obj.get('validation', pd.DataFrame())
 
-# Preparar dados para modelagem
-if 'text_lemmatized' in df.columns and 'sentiment' in df.columns:
-    X = df['text_lemmatized']
-    y = df['sentiment']
-    
-    # Dividir em conjuntos de treino e teste
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    
-    print(f"Tamanho do conjunto de treino: {X_train.shape[0]}")
-    print(f"Tamanho do conjunto de teste: {X_test.shape[0]}")
+def train_and_evaluate():
+    df_train, df_val = load_processed()
+    X_train = df_train['text_lemmatized'].astype(str)
+    y_train = df_train['sentiment']
+    X_val = df_val['text_lemmatized'].astype(str)
+    y_val = df_val['sentiment']
 
-## Modelo 1: Regressão Logística com TF-IDF
+    # remove empty
+    mask_train = X_train.str.strip().replace('', np.nan).notna()
+    mask_val = X_val.str.strip().replace('', np.nan).notna()
+    X_train = X_train[mask_train]; y_train = y_train[mask_train]
+    X_val = X_val[mask_val]; y_val = y_val[mask_val]
 
-# Pipeline para Regressão Logística
-lr_pipeline = Pipeline([
-    ('tfidf', TfidfVectorizer(max_features=5000)),
-    ('clf', LogisticRegression(random_state=42, max_iter=1000))
-])
+    models = {
+        'LogisticRegression': LogisticRegression(max_iter=2000, random_state=42),
+        'MultinomialNB': MultinomialNB(),
+        'LinearSVC': LinearSVC(max_iter=20000, random_state=42)
+    }
 
-# Treinar o modelo
-lr_pipeline.fit(X_train, y_train)
+    results = {}
+    for name, clf in models.items():
+        print(f'Training {name}...')
+        pipe = Pipeline([
+            ('tfidf', TfidfVectorizer(max_features=15000, ngram_range=(1,2))),
+            ('clf', clf)
+        ])
+        t0 = time.time(); pipe.fit(X_train, y_train); t1 = time.time()
+        train_time = t1 - t0
+        t0p = time.time(); preds = pipe.predict(X_val); t1p = time.time(); predict_time = t1p - t0p
 
-# Avaliar o modelo
-y_pred_lr = lr_pipeline.predict(X_test)
-print("Relatório de Classificação - Regressão Logística:")
-print(classification_report(y_test, y_pred_lr))
+        acc = accuracy_score(y_val, preds)
+        f1 = f1_score(y_val, preds, average='macro')
+        report = classification_report(y_val, preds, output_dict=True)
+        cm = confusion_matrix(y_val, preds)
 
-# Matriz de confusão
-plt.figure(figsize=(8, 6))
-cm = confusion_matrix(y_test, y_pred_lr)
-sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=lr_pipeline.classes_, yticklabels=lr_pipeline.classes_)
-plt.title('Matriz de Confusão - Regressão Logística')
-plt.xlabel('Predito')
-plt.ylabel('Real')
-plt.tight_layout()
-plt.show()
+        # scores for ROC/PR
+        classes = np.unique(y_val)
+        y_val_b = label_binarize(y_val, classes=classes)
+        y_score = None
+        try:
+            y_score = pipe.predict_proba(X_val)
+        except Exception:
+            try:
+                decision = pipe.decision_function(X_val)
+                if decision.ndim == 1:
+                    decision = np.vstack([-decision, decision]).T
+                y_score = decision
+            except Exception:
+                y_score = None
 
-## Modelo 2: Naive Bayes Multinomial
+        roc_auc_macro = None; avg_precision_macro = None
+        if y_score is not None and y_score.shape[1] == y_val_b.shape[1]:
+            try:
+                roc_auc_macro = roc_auc_score(y_val_b, y_score, average='macro', multi_class='ovr')
+            except Exception:
+                roc_auc_macro = None
+            try:
+                avg_precision_macro = average_precision_score(y_val_b, y_score, average='macro')
+            except Exception:
+                avg_precision_macro = None
 
-# Pipeline para Naive Bayes
-nb_pipeline = Pipeline([
-    ('tfidf', TfidfVectorizer(max_features=5000)),
-    ('clf', MultinomialNB())
-])
+        results[name] = {
+            'pipeline': pipe,
+            'accuracy': acc,
+            'f1_macro': f1,
+            'roc_auc_macro': roc_auc_macro,
+            'average_precision_macro': avg_precision_macro,
+            'train_time_seconds': train_time,
+            'predict_time_seconds': predict_time,
+            'report': report,
+            'confusion_matrix': cm.tolist(),
+            'y_score': y_score
+        }
+        print(f'[RESULT] {name} — acc={acc:.4f} f1_macro={f1:.4f}')
 
-# Treinar o modelo
-nb_pipeline.fit(X_train, y_train)
+    # choose best
+    best = max(results.keys(), key=lambda k: results[k]['f1_macro'])
+    best_pipeline = results[best]['pipeline']
+    joblib.dump(best_pipeline, MODEL_DIR / 'sentiment_model.pkl')
+    print(f'[OK] Best model: {best} saved to {MODEL_DIR / "sentiment_model.pkl"}')
 
-# Avaliar o modelo
-y_pred_nb = nb_pipeline.predict(X_test)
-print("Relatório de Classificação - Naive Bayes:")
-print(classification_report(y_test, y_pred_nb))
+    # save metrics JSON
+    metrics_out = {'best_model': best, 'results': {}}
+    for k in results:
+        metrics_out['results'][k] = {
+            'accuracy': results[k]['accuracy'],
+            'f1_macro': results[k]['f1_macro'],
+            'roc_auc_macro': results[k].get('roc_auc_macro'),
+            'average_precision_macro': results[k].get('average_precision_macro'),
+            'train_time_seconds': results[k].get('train_time_seconds'),
+            'predict_time_seconds': results[k].get('predict_time_seconds'),
+            'classification_report': results[k]['report'],
+            'confusion_matrix': results[k]['confusion_matrix']
+        }
+    (METRICS_DIR / 'model_metrics.json').write_text(pd.io.json.dumps(metrics_out, indent=2))
+    print(f'[OK] Metrics saved to {METRICS_DIR / "model_metrics.json"}')
 
-# Matriz de confusão
-plt.figure(figsize=(8, 6))
-cm = confusion_matrix(y_test, y_pred_nb)
-sns.heatmap(cm, annot=True, fmt='d', cmap='Greens', xticklabels=nb_pipeline.classes_, yticklabels=nb_pipeline.classes_)
-plt.title('Matriz de Confusão - Naive Bayes')
-plt.xlabel('Predito')
-plt.ylabel('Real')
-plt.tight_layout()
-plt.show()
+    # comparison plots (ROC, PR, confusion side-by-side)
+    classes_all = np.unique(y_val)
+    y_val_b_all = label_binarize(y_val, classes=classes_all)
 
-## Modelo 3: Random Forest
+    # ROC
+    plt.figure(figsize=(8, 6))
+    any_plot = False
+    for name in results:
+        ys = results[name].get('y_score')
+        if ys is None:
+            continue
+        try:
+            fpr, tpr, _ = roc_curve(y_val_b_all.ravel(), ys.ravel())
+            auc_val = results[name].get('roc_auc_macro')
+            label = name + (f' (AUC={auc_val:.3f})' if auc_val is not None else '')
+            plt.plot(fpr, tpr, lw=2, label=label)
+            any_plot = True
+        except Exception:
+            continue
+    if any_plot:
+        plt.plot([0, 1], [0, 1], 'k--', linewidth=0.5)
+        plt.xlabel('False Positive Rate'); plt.ylabel('True Positive Rate')
+        plt.title('Comparative ROC Curves (all models)')
+        plt.legend(loc='lower right'); plt.tight_layout(); plt.savefig(VIS_DIR / 'comparison_roc.png'); plt.close()
 
-# Pipeline para Random Forest
-rf_pipeline = Pipeline([
-    ('tfidf', TfidfVectorizer(max_features=5000)),
-    ('clf', RandomForestClassifier(n_estimators=100, random_state=42))
-])
+    # PR
+    plt.figure(figsize=(8, 6))
+    any_plot = False
+    for name in results:
+        ys = results[name].get('y_score')
+        if ys is None:
+            continue
+        try:
+            precision, recall, _ = precision_recall_curve(y_val_b_all.ravel(), ys.ravel())
+            ap = results[name].get('average_precision_macro')
+            label = name + (f' (AP={ap:.3f})' if ap is not None else '')
+            plt.plot(recall, precision, lw=2, label=label)
+            any_plot = True
+        except Exception:
+            continue
+    if any_plot:
+        plt.xlabel('Recall'); plt.ylabel('Precision')
+        plt.title('Comparative Precision-Recall Curves (all models)')
+        plt.legend(loc='lower left'); plt.tight_layout(); plt.savefig(VIS_DIR / 'comparison_pr.png'); plt.close()
 
-# Treinar o modelo
-rf_pipeline.fit(X_train, y_train)
+    # Confusion matrices side-by-side
+    model_names = list(results.keys())
+    cms = [np.array(results[nm]['confusion_matrix']) for nm in model_names]
+    if cms:
+        vmax = max(cm.max() for cm in cms)
+        fig, axes = plt.subplots(1, len(model_names), figsize=(6 * len(model_names), 5))
+        if len(model_names) == 1:
+            axes = [axes]
+        for ax, nm, cm in zip(axes, model_names, cms):
+            sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=classes_all, yticklabels=classes_all, vmin=0, vmax=vmax, ax=ax)
+            ax.set_title(f'Confusion — {nm}'); ax.set_xlabel('Predito'); ax.set_ylabel('Real')
+        plt.tight_layout(); plt.savefig(VIS_DIR / 'comparison_confusion_matrices.png'); plt.close()
 
-# Avaliar o modelo
-y_pred_rf = rf_pipeline.predict(X_test)
-print("Relatório de Classificação - Random Forest:")
-print(classification_report(y_test, y_pred_rf))
+    return results
 
-# Matriz de confusão
-plt.figure(figsize=(8, 6))
-cm = confusion_matrix(y_test, y_pred_rf)
-sns.heatmap(cm, annot=True, fmt='d', cmap='Oranges', xticklabels=rf_pipeline.classes_, yticklabels=rf_pipeline.classes_)
-plt.title('Matriz de Confusão - Random Forest')
-plt.xlabel('Predito')
-plt.ylabel('Real')
-plt.tight_layout()
-plt.show()
-
-## Comparação dos Modelos
-
-# Comparar acurácia dos modelos
-models = {
-    'Regressão Logística': (lr_pipeline, y_pred_lr),
-    'Naive Bayes': (nb_pipeline, y_pred_nb),
-    'Random Forest': (rf_pipeline, y_pred_rf)
-}
-
-accuracies = {}
-for name, (model, y_pred) in models.items():
-    acc = accuracy_score(y_test, y_pred)
-    accuracies[name] = acc
-    print(f"{name}: {acc:.4f}")
-
-# Visualizar comparação
-plt.figure(figsize=(10, 6))
-plt.bar(accuracies.keys(), accuracies.values(), color=['blue', 'green', 'orange'])
-plt.title('Comparação de Acurácia entre Modelos')
-plt.xlabel('Modelo')
-plt.ylabel('Acurácia')
-plt.ylim(0, 1)
-for i, v in enumerate(accuracies.values()):
-    plt.text(i, v + 0.01, f"{v:.4f}", ha='center')
-plt.tight_layout()
-plt.show()
-
-## Salvar o Melhor Modelo
-
-# Identificar o melhor modelo
-best_model_name = max(accuracies, key=accuracies.get)
-best_model = models[best_model_name][0]
-print(f"Melhor modelo: {best_model_name} com acurácia de {accuracies[best_model_name]:.4f}")
-
-# Salvar o modelo (em `src/models` do repositório)
-model_path = project_root / 'src' / 'models' / 'sentiment_model.pkl'
-model_path.parent.mkdir(parents=True, exist_ok=True)
-joblib.dump(best_model, str(model_path))
-print(f"Modelo salvo em: {model_path}")
-
-## Conclusões da Modelagem
-# - Resumo dos modelos testados
-# - Análise do desempenho do melhor modelo
-# - Próximos passos para avaliação e implantação
+if __name__ == '__main__':
+    train_and_evaluate()
