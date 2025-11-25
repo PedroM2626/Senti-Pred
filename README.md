@@ -6,6 +6,14 @@ Projeto de análise de sentimentos com processamento de linguagem natural e apre
 
 O Senti-Pred é um projeto de análise de sentimentos que utiliza técnicas de processamento de linguagem natural e aprendizado de máquina para classificar textos de acordo com o sentimento expresso. Este repositório oferece diferentes abordagens para explorar e utilizar o pipeline de análise de sentimentos.
 
+## Fonte dos Dados
+
+O dataset utilizado neste projeto foi obtido a partir do repositório público no Kaggle:
+
+https://www.kaggle.com/datasets/jp797498e/twitter-entity-sentiment-analysis
+
+Por favor, verifique os termos de uso e a licença do dataset no Kaggle antes de redistribuir os dados.
+
 ## Opções de Execução
 
 O projeto pode ser executado de três maneiras principais, cada uma com sua própria documentação detalhada:
