@@ -58,8 +58,7 @@ senti-pred/
 │   └── processed/ (dados processados)
 ├── r_shiny/
 │   └── app.R (Aplicativo R Shiny)
-├── notebooks/
-│   └── full_pipeline.ipynb (Pipeline completo)
+├── full_pipeline.ipynb (Pipeline completo) 
 ├── src/
 │   ├── models/ (código dos modelos)
 │   ├── api/ (Django API)
