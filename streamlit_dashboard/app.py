@@ -1,7 +1,7 @@
+import os
 import streamlit as st
 import json
 import pandas as pd
-import plotly.express as px
 from PIL import Image
 
 st.set_page_config(layout="wide")
@@ -9,50 +9,64 @@ st.set_page_config(layout="wide")
 st.title("Dashboard de Métricas do Modelo Senti-Pred")
 
 st.markdown("""
-Este dashboard apresenta as métricas de avaliação do modelo de análise de sentimentos Senti-Pred.
+Este dashboard apresenta as métricas de avaliação e as visualizações geradas pelo pipeline Senti-Pred.
 """)
 
-# Carregar métricas do modelo
-try:
-    with open('../reports/metrics/model_metrics.json', 'r') as f:
-        metrics = json.load(f)
-except FileNotFoundError:
-    st.error("Arquivo de métricas 'model_metrics.json' não encontrado. Por favor, execute o script de avaliação primeiro.")
+# Paths (relativos à pasta streamlit_dashboard)
+BASE = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+METRICS_PATH = os.path.join(BASE, 'reports', 'metrics', 'model_metrics.json')
+VIS_DIR = os.path.join(BASE, 'reports', 'visualizacoes')
+
+if not os.path.exists(METRICS_PATH):
+    st.error("Arquivo de métricas 'reports/metrics/model_metrics.json' não encontrado. Execute `03_modeling.py` e `04_evaluation.py` para gerar métricas.")
     st.stop()
 
-st.header("Métricas de Classificação")
+with open(METRICS_PATH, 'r') as f:
+    metrics = json.load(f)
 
-col1, col2, col3, col4 = st.columns(4)
+st.header("Resumo")
+st.write(f"**Melhor modelo:** {metrics.get('best_model', 'N/A')}")
 
+# Build table of model metrics
+rows = []
+for name, info in metrics.get('results', {}).items():
+    rows.append({
+        'model': name,
+        'accuracy': info.get('accuracy'),
+        'f1_macro': info.get('f1_macro'),
+        'roc_auc_macro': info.get('roc_auc_macro'),
+        'average_precision_macro': info.get('average_precision_macro'),
+        'train_time_s': info.get('train_time_seconds'),
+        'predict_time_s': info.get('predict_time_seconds')
+    })
+
+if len(rows) > 0:
+    df_metrics = pd.DataFrame(rows).sort_values('f1_macro', ascending=False)
+    st.dataframe(df_metrics)
+else:
+    st.info('Nenhuma métrica encontrada em results do JSON.')
+
+st.header('Visualizações')
+col1, col2 = st.columns(2)
 with col1:
-    st.metric("Acurácia", f"{metrics['accuracy']:.4f}")
+    roc_p = os.path.join(VIS_DIR, 'comparison_roc.png')
+    if os.path.exists(roc_p):
+        st.image(roc_p, caption='ROC Comparativo', use_column_width=True)
+    else:
+        st.warning('ROC comparativo não encontrado (reports/visualizacoes/comparison_roc.png)')
 with col2:
-    st.metric("Precisão (Macro Avg)", f"{metrics['classification_report']['macro avg']['precision']:.4f}")
-with col3:
-    st.metric("Recall (Macro Avg)", f"{metrics['classification_report']['macro avg']['recall']:.4f}")
-with col4:
-    st.metric("F1-Score (Macro Avg)", f"{metrics['classification_report']['macro avg']['f1-score']:.4f}")
+    pr_p = os.path.join(VIS_DIR, 'comparison_pr.png')
+    if os.path.exists(pr_p):
+        st.image(pr_p, caption='PR Comparativo', use_column_width=True)
+    else:
+        st.warning('PR comparativo não encontrado (reports/visualizacoes/comparison_pr.png)')
 
-st.subheader("Relatório de Classificação Detalhado")
-st.json(metrics['classification_report'])
+cm_p = os.path.join(VIS_DIR, 'comparison_confusion_matrices.png')
+if os.path.exists(cm_p):
+    st.header('Matrizes de Confusão Comparativas')
+    st.image(cm_p, use_column_width=True)
+else:
+    st.warning('Matrizes de confusão não encontradas (reports/visualizacoes/comparison_confusion_matrices.png)')
 
-st.header("Matriz de Confusão")
-try:
-    confusion_matrix_image = Image.open('../reports/metrics/confusion_matrix.png')
-    st.image(confusion_matrix_image, caption='Matriz de Confusão', use_container_width=True)
-except FileNotFoundError:
-    st.warning("Imagem da Matriz de Confusão não encontrada.")
-
-st.header("Curva ROC")
-try:
-    roc_curve_image = Image.open('../reports/metrics/roc_pr_curve.png')
-    st.image(roc_curve_image, caption='Curva ROC', use_container_width=True)
-except FileNotFoundError:
-    st.warning("Imagem da Curva ROC não encontrada.")
-
-st.header("Curva Precision-Recall")
-try:
-    pr_curve_image = Image.open('../reports/metrics/roc_pr_curve.png')
-    st.image(pr_curve_image, caption='Curva Precision-Recall', use_container_width=True)
-except FileNotFoundError:
-    st.warning("Imagem da Curva Precision-Recall não encontrada.")
+st.header('Relatório completo (JSON)')
+st.json(metrics)
