@@ -1,6 +1,6 @@
 # Senti-Pred
 
-[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/PedroM2626/Senti-Pred/blob/main/notebooks/full_pipeline.ipynb)
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/PedroM2626/Senti-Pred/blob/main/full_pipeline.ipynb)
 
 Projeto de análise de sentimentos com processamento de linguagem natural e aprendizado de máquina.
 
