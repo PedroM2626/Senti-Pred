@@ -8,6 +8,7 @@ library(shinydashboard)
 library(jsonlite)
 
 # UI
+# Definição da interface (UI) do dashboard: layout, menu e abas principais
 ui <- dashboardPage(
   dashboardHeader(title = "Senti-Pred EDA Dashboard"),
   dashboardSidebar(
@@ -19,8 +20,9 @@ ui <- dashboardPage(
   ),
   dashboardBody(
     tabItems(
-      # Raw Data Tab
-      tabItem(tabName = "raw_data",
+    # Raw Data Tab
+    # Exibe status e amostra dos dados brutos (treino/validação) lidos de data/raw/
+    tabItem(tabName = "raw_data",
               h2("Análise de Dados Brutos"),
               textOutput("raw_data_status"),
               fluidRow(
@@ -31,6 +33,7 @@ ui <- dashboardPage(
       ),
 
       # Visualizations Tab
+      # Mostra imagens geradas pelo pipeline (EDA e métricas comparativas)
       tabItem(tabName = "visualizations",
               h2("Visualizações Geradas pelo Pipeline"),
               fluidRow(
@@ -57,6 +60,7 @@ ui <- dashboardPage(
       ),
 
       # Metrics / Predictions Tab
+      # Apresenta o JSON de métricas e tabela de previsões (se existir)
       tabItem(tabName = "metrics",
               h2("Métricas e Previsões"),
               textOutput("metrics_status"),
@@ -76,15 +80,19 @@ ui <- dashboardPage(
 )
 
 # Server
+# Lógica do backend: carrega dados, renderiza tabelas e imagens,
+# lê métricas/JSON e exibe previsões quando disponíveis
 server <- function(input, output) {
   # Paths
+  # Caminhos para arquivos e diretórios utilizados durante a execução
   train_path <- file.path('data', 'raw', 'twitter_training.csv')
   val_path <- file.path('data', 'raw', 'twitter_validation.csv')
   vis_dir <- file.path('reports', 'visualizacoes')
   metrics_path <- file.path('reports', 'metrics', 'model_metrics.json')
   predictions_path <- file.path('data', 'processed', 'predictions.csv')
 
-  # Load raw data (try both train + val)
+  # Carregamento dos dados brutos (treino e validação)
+  # Lê CSVs em data/raw/, combina quando ambos existem e marca a coluna 'split'
   raw_data <- reactive({
     df_train <- tryCatch(read_csv(train_path, col_names = c('tweet_id','entity','sentiment','text'), show_col_types = FALSE), error = function(e) NULL)
     df_val <- tryCatch(read_csv(val_path, col_names = c('tweet_id','entity','sentiment','text'), show_col_types = FALSE), error = function(e) NULL)
@@ -100,6 +108,7 @@ server <- function(input, output) {
     df
   })
 
+  # Status textual sobre presença dos dados brutos e quantidade de linhas
   output$raw_data_status <- renderText({
     df <- raw_data()
     if (nrow(df) == 0) {
@@ -109,6 +118,7 @@ server <- function(input, output) {
     }
   })
 
+  # Exibe uma amostra (até 200 linhas) dos dados brutos carregados
   output$raw_data_table <- renderDT({
     df <- raw_data()
     if (nrow(df) == 0) return(datatable(data.frame(message='Nenhum dado disponível')))
@@ -116,6 +126,7 @@ server <- function(input, output) {
   })
 
   # Visualizações: imagens geradas pelo pipeline
+  # Helper para servir imagens geradas pelo pipeline; retorna NULL se não existir
   image_or_placeholder <- function(path) {
     if (file.exists(path)) {
       list(src = path, contentType = 'image/png', alt = basename(path))
@@ -124,48 +135,55 @@ server <- function(input, output) {
     }
   }
 
+  # Distribuição de comprimento de texto (EDA)
   output$img_text_length <- renderImage({
     path <- file.path(vis_dir, 'text_length.png')
     image_or_placeholder(path)
   }, deleteFile = FALSE)
 
+  # Palavras mais frequentes (dados brutos)
   output$img_top_words <- renderImage({
     path <- file.path(vis_dir, 'top_words_raw.png')
     image_or_placeholder(path)
   }, deleteFile = FALSE)
 
+  # Curvas ROC comparativas entre modelos
   output$img_roc <- renderImage({
     path <- file.path(vis_dir, 'comparison_roc.png')
     image_or_placeholder(path)
   }, deleteFile = FALSE)
 
+  # Curvas Precision-Recall comparativas entre modelos
   output$img_pr <- renderImage({
     path <- file.path(vis_dir, 'comparison_pr.png')
     image_or_placeholder(path)
   }, deleteFile = FALSE)
 
+  # Matrizes de confusão comparativas entre modelos
   output$img_cm <- renderImage({
     path <- file.path(vis_dir, 'comparison_confusion_matrices.png')
     image_or_placeholder(path)
   }, deleteFile = FALSE)
 
-  # Metrics JSON
+  # Métricas do modelo (JSON) — carrega 'reports/metrics/model_metrics.json'
   metrics <- reactive({
     if (!file.exists(metrics_path)) return(NULL)
     tryCatch(fromJSON(metrics_path), error = function(e) NULL)
   })
 
+  # Status textual das métricas (melhor modelo, ou aviso se faltarem)
   output$metrics_status <- renderText({
     if (is.null(metrics())) "Métricas: não encontradas (execute '03_modeling.py' e '04_evaluation.py')" else paste0('Métricas carregadas — melhor modelo: ', metrics()$best_model)
   })
 
+  # Impressão completa do JSON de métricas para inspeção
   output$metrics_json <- renderPrint({
     m <- metrics()
     if (is.null(m)) return(cat('Nenhuma métrica disponível'))
     print(m)
   })
 
-  # Predictions table (if exists)
+  # Tabela de previsões (se existir 'data/processed/predictions.csv')
   output$predictions_table <- renderDT({
     if (!file.exists(predictions_path)) return(datatable(data.frame(message='Nenhum arquivo de previsões encontrado (data/processed/predictions.csv)')))
     df <- tryCatch(read_csv(predictions_path, show_col_types = FALSE), error = function(e) data.frame())
@@ -174,5 +192,5 @@ server <- function(input, output) {
   })
 }
 
-# Run the application 
+# Inicialização do aplicativo Shiny
 shinyApp(ui = ui, server = server)

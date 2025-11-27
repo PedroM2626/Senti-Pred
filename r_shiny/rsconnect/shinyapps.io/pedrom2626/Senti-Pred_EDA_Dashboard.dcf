@@ -1,0 +1,12 @@
+name: Senti-Pred_EDA_Dashboard
+title: Senti-Pred_EDA_Dashboard
+username: pedrom2626
+account: pedrom2626
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 16186163
+bundleId: 11242995
+url: https://pedrom2626.shinyapps.io/Senti-Pred_EDA_Dashboard/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
