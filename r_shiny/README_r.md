@@ -8,7 +8,7 @@ O dashboard R Shiny oferece uma interface interativa para explorar os dados brut
 
 ## Deploy Online
 
-Este dashboard está deployado e disponível publicamente em: <mcurl name="https://pedrom2626.shinyapps.io/r_shiny/" url="https://pedrom2626.shinyapps.io/r_shiny/"></mcurl>
+Este dashboard está deployado e disponível publicamente em: [Senti-Pred EDA Dashboard](https://pedrom2626.shinyapps.io/r_shiny/)
 
 ## Estrutura do Projeto R
 
