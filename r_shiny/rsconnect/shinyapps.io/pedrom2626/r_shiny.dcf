@@ -5,7 +5,7 @@ account: pedrom2626
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 15863759
-bundleId: 11081629
+bundleId: 11243010
 url: https://pedrom2626.shinyapps.io/r_shiny/
 version: 1
 asMultiple: FALSE

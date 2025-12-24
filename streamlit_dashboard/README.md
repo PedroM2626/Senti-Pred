@@ -94,6 +94,34 @@ Senti-Pred/
 - Edite `streamlit_dashboard/app.py` para alterar colunas exibidas, legendas e caminhos das imagens.
 - Os gráficos são salvos pelos scripts em `reports/visualizacoes/`. Para incluir novos gráficos, gere-os nos scripts e referencie-os no dashboard.
 
+## Deploy com Docker (Recomendado)
+
+O projeto já está configurado para ser executado via Docker, o que garante que todas as dependências e caminhos funcionem corretamente sem precisar configurar o ambiente local manualmente.
+
+1. Certifique-se de ter o Docker e Docker Compose instalados.
+
+2. Na raiz do projeto (`Senti-Pred/`), execute:
+
+```bash
+docker-compose up --build dashboard
+```
+
+3. Acesse o dashboard em `http://localhost:8501`.
+
+## Deploy no Streamlit Cloud
+
+Para deployar publicamente no Streamlit Cloud:
+
+1. Suba este repositório para o GitHub.
+2. Crie uma conta no [Streamlit Cloud](https://share.streamlit.io/).
+3. Conecte sua conta do GitHub e selecione o repositório.
+4. Configure:
+   - **Main file path:** `streamlit_dashboard/app.py`
+   - **Python version:** 3.9 (ou compatível)
+5. Clique em **Deploy**.
+
+**Nota:** Como o dashboard depende de arquivos gerados localmente (`reports/`), você deve garantir que esses arquivos (`model_metrics.json`, imagens png) estejam commitados no repositório ou sejam gerados como parte do processo de build (o que é mais complexo no Streamlit Cloud gratuito). A opção mais simples para este projeto específico é commitar a pasta `reports/` gerada.
+
 ## Licença
 
 Este dashboard segue a mesma licença do repositório principal (MIT).

@@ -20,6 +20,18 @@ services:
     networks:
       - senti-pred-network
 
+  # Serviço do Dashboard Streamlit
+  dashboard:
+    build:
+      context: .
+      dockerfile: streamlit_dashboard/Dockerfile
+    ports:
+      - "8501:8501"
+    volumes:
+      - .:/app
+    networks:
+      - senti-pred-network
+
   # Serviço do banco de dados
   db:
     image: postgres:13
