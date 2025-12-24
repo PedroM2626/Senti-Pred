@@ -2,7 +2,7 @@
 
 Este README documenta o dashboard em Streamlit que exibe as métricas e visualizações geradas pelo pipeline Senti-Pred.
 
-**Deploy Online**: O dashboard está disponível publicamente em: https://senti-pred-dashboard.streamlit.app/
+**Deploy Online**: O dashboard está disponível publicamente em: [Senti-Pred Metrics Dashboard](https://senti-pred-dashboard.streamlit.app/)
 
 ## Visão Geral
 
