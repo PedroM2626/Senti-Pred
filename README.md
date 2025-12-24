@@ -39,6 +39,7 @@ O projeto pode ser executado de três maneiras principais, cada uma com sua pró
     -   **Deploy Online**: O dashboard está disponível publicamente em: [Senti-Pred EDA Dashboard](https://pedrom2626.shinyapps.io/r_shiny/)
 
 5.  **Dashboard de Métricas Streamlit**: Para visualizar as métricas de avaliação do modelo de forma interativa.
+    -   **Deploy Online**: O dashboard está disponível publicamente em: [Senti-Pred Metrics Dashboard](https://senti-pred-dashboard.streamlit.app/)
     -   **Execução Local (resumo)**:
         1.  Instale dependências: `pip install -r requirements.txt` (ou somente `pip install streamlit pandas pillow`).
         2.  Gere artefatos do pipeline:
