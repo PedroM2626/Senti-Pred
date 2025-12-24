@@ -36,7 +36,7 @@ O projeto pode ser executado de três maneiras principais, cada uma com sua pró
 
 4.  **Dashboard Interativo R Shiny**: Para análise exploratória de dados (EDA) interativa dos dados brutos, processados e de previsão.
     -   Veja o guia completo em: [README_r.md](README_r.md)
-    -   **Deploy Online**: O dashboard está disponível publicamente em: <mcurl name="https://pedrom2626.shinyapps.io/r_shiny/" url="https://pedrom2626.shinyapps.io/r_shiny/"></mcurl>
+    -   **Deploy Online**: O dashboard está disponível publicamente em: [Senti-Pred EDA Dashboard](https://pedrom2626.shinyapps.io/r_shiny/)
 
 5.  **Dashboard de Métricas Streamlit**: Para visualizar as métricas de avaliação do modelo de forma interativa.
     -   **Execução Local (resumo)**:
