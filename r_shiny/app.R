@@ -19,6 +19,28 @@ ui <- dashboardPage(
     )
   ),
   dashboardBody(
+    tags$head(
+      tags$style(HTML("
+        .box {
+          margin-bottom: 20px !important;
+        }
+        .content-wrapper {
+          padding-bottom: 30px;
+        }
+        .box .box-body {
+          overflow: hidden;
+        }
+        .shiny-image-output {
+          text-align: center;
+        }
+        .shiny-image-output img {
+          max-width: 100%;
+          width: 100%;
+          height: auto;
+          display: block;
+        }
+      "))
+    ),
     tabItems(
     # Raw Data Tab
     # Exibe status e amostra dos dados brutos (treino/validação) lidos de data/raw/
@@ -38,23 +60,28 @@ ui <- dashboardPage(
               h2("Visualizações Geradas pelo Pipeline"),
               fluidRow(
                 box(title = "Distribuição de Comprimento de Texto", status = "info", solidHeader = TRUE, width = 6,
-                    imageOutput('img_text_length')
+                    imageOutput('img_text_length', width = "100%", height = "380px"),
+                    br(), br()
                 ),
                 box(title = "Top Words (raw)", status = "info", solidHeader = TRUE, width = 6,
-                    imageOutput('img_top_words')
+                    imageOutput('img_top_words', width = "100%", height = "380px"),
+                    br(), br()
                 )
               ),
               fluidRow(
                 box(title = "ROC Comparativo", status = "primary", solidHeader = TRUE, width = 6,
-                    imageOutput('img_roc')
+                    imageOutput('img_roc', width = "100%", height = "380px"),
+                    br(), br()
                 ),
                 box(title = "PR Comparativo", status = "primary", solidHeader = TRUE, width = 6,
-                    imageOutput('img_pr')
+                    imageOutput('img_pr', width = "100%", height = "380px"),
+                    br(), br()
                 )
               ),
               fluidRow(
                 box(title = "Matrizes de Confusão Comparativas", status = "primary", solidHeader = TRUE, width = 12,
-                    imageOutput('img_cm')
+                    imageOutput('img_cm', width = "100%", height = "480px"),
+                    br(), br()
                 )
               )
       ),
