@@ -25,7 +25,7 @@ O projeto pode ser executado de três maneiras principais, cada uma com sua pró
         - `01_eda.py` — Análise exploratória e geração de PNGs em `reports/visualizacoes/`.
         - `02_preprocessing.py` — Pré-processamento em inglês; gera um artefato binário em `data/processed/processed_data.pkl`.
         - `03_modeling.py` — Treina modelos a partir do pickle processado, salva o melhor em `src/models/sentiment_model.pkl`, gera métricas JSON e gráficos comparativos (ROC/PR/confusion) em `reports/visualizacoes/`.
-        - `04_evaluation.py` — Avaliação do modelo salvo; gera imagens e `reports/metrics/model_metrics.json`.
+        - `04_evaluation.py` — Avaliação do modelo salvo; gera imagens e `reports/metrics/model_metrics.json` com estrutura contendo `best_model` e `results`.
     -   Veja o guia completo em: [README_scripts.md](README_scripts.md)
 
 2.  **Notebook Jupyter**: Para uma exploração interativa e desenvolvimento passo a passo do pipeline completo.
@@ -94,6 +94,39 @@ senti-pred/
 ├── requirements.txt
 └── docker-compose.yml
 ```
+
+## Estrutura dos Dados de Métricas
+
+O arquivo `reports/metrics/model_metrics.json` contém a estrutura padronizada de métricas do projeto:
+
+```json
+{
+  "best_model": "LinearSVC",
+  "results": {
+    "LinearSVC": {
+      "accuracy": 0.938,
+      "f1_macro": 0.937,
+      "train_time_seconds": 0,
+      "predict_time_seconds": 0,
+      "classification_report": {
+        "Positive": {"precision": 0.929, "recall": 0.939, "f1-score": 0.934, "support": 285},
+        "Negative": {"precision": 0.921, "recall": 0.962, "f1-score": 0.941, "support": 266},
+        "Neutral": {"precision": 0.974, "recall": 0.916, "f1-score": 0.944, "support": 285},
+        "Irrelevant": {"precision": 0.925, "recall": 0.936, "f1-score": 0.931, "support": 172},
+        "macro avg": {"precision": 0.937, "recall": 0.938, "f1-score": 0.937, "support": 1008}
+      },
+      "confusion_matrix": [[...]]
+    }
+  },
+  "model_classes": ["Positive", "Negative", "Neutral", "Irrelevant"]
+}
+```
+
+Esta estrutura é utilizada pelo dashboard Streamlit para exibir:
+- **Melhor modelo** identificado automaticamente
+- **Acurácia global** e **F1-score macro**
+- **Métricas por classe** (precision, recall, f1-score, support)
+- **Médias macro** dos valores por classe
 
 ## Instalação e Configuração (Geral)
 

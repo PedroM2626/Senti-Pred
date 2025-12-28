@@ -28,26 +28,83 @@ with open(METRICS_PATH, 'r') as f:
     metrics = json.load(f)
 
 st.header("Resumo")
-st.write(f"**Melhor modelo:** {metrics.get('best_model', 'N/A')}")
 
-# Build table of model metrics
-rows = []
-for name, info in metrics.get('results', {}).items():
-    rows.append({
-        'model': name,
-        'accuracy': info.get('accuracy'),
-        'f1_macro': info.get('f1_macro'),
-        'roc_auc_macro': info.get('roc_auc_macro'),
-        'average_precision_macro': info.get('average_precision_macro'),
-        'train_time_s': info.get('train_time_seconds'),
-        'predict_time_s': info.get('predict_time_seconds')
-    })
-
-if len(rows) > 0:
-    df_metrics = pd.DataFrame(rows).sort_values('f1_macro', ascending=False)
-    st.dataframe(df_metrics)
+# Nova estrutura JSON com best_model e results
+if 'best_model' in metrics and 'results' in metrics:
+    best_model_name = metrics['best_model']
+    st.write(f"**Melhor modelo:** {best_model_name}")
+    
+    if best_model_name in metrics['results']:
+        model_results = metrics['results'][best_model_name]
+        
+        # Mostrar acurácia global
+        if 'accuracy' in model_results:
+            st.write(f"**Acurácia Global:** {model_results['accuracy']:.3f}")
+        
+        # Build table of model metrics usando classification_report
+        if 'classification_report' in model_results:
+            rows = []
+            for class_name, class_metrics in model_results['classification_report'].items():
+                if class_name not in ['accuracy', 'macro avg', 'weighted avg']:
+                    rows.append({
+                        'classe': class_name,
+                        'precision': class_metrics.get('precision'),
+                        'recall': class_metrics.get('recall'),
+                        'f1-score': class_metrics.get('f1-score'),
+                        'support': class_metrics.get('support')
+                    })
+            
+            # Adicionar médias
+            if 'macro avg' in model_results['classification_report']:
+                avg_metrics = model_results['classification_report']['macro avg']
+                rows.append({
+                    'classe': 'Média Macro',
+                    'precision': avg_metrics.get('precision'),
+                    'recall': avg_metrics.get('recall'),
+                    'f1-score': avg_metrics.get('f1-score'),
+                    'support': avg_metrics.get('support')
+                })
+            
+            if len(rows) > 0:
+                df_metrics = pd.DataFrame(rows)
+                st.dataframe(df_metrics)
+        else:
+            st.info('Nenhuma métrica encontrada no classification_report do JSON.')
+    else:
+        st.info(f'Resultados do modelo {best_model_name} não encontrados.')
 else:
-    st.info('Nenhuma métrica encontrada em results do JSON.')
+    # Fallback para estrutura antiga (se existir)
+    if 'accuracy' in metrics:
+        st.write(f"**Acurácia Global:** {metrics['accuracy']:.3f}")
+    
+    if 'classification_report' in metrics:
+        rows = []
+        for class_name, class_metrics in metrics['classification_report'].items():
+            if class_name not in ['accuracy', 'macro avg', 'weighted avg']:
+                rows.append({
+                    'classe': class_name,
+                    'precision': class_metrics.get('precision'),
+                    'recall': class_metrics.get('recall'),
+                    'f1-score': class_metrics.get('f1-score'),
+                    'support': class_metrics.get('support')
+                })
+        
+        # Adicionar médias
+        if 'macro avg' in metrics['classification_report']:
+            avg_metrics = metrics['classification_report']['macro avg']
+            rows.append({
+                'classe': 'Média Macro',
+                'precision': avg_metrics.get('precision'),
+                'recall': avg_metrics.get('recall'),
+                'f1-score': avg_metrics.get('f1-score'),
+                'support': avg_metrics.get('support')
+            })
+        
+        if len(rows) > 0:
+            df_metrics = pd.DataFrame(rows)
+            st.dataframe(df_metrics)
+    else:
+        st.info('Nenhuma métrica encontrada no JSON.')
 
 st.header('Visualizações')
 col1, col2 = st.columns(2)

@@ -71,7 +71,21 @@ def run_evaluation():
     plt.savefig(VIS_DIR / 'evaluation_confusion_matrix.png')
     plt.close()
 
-    metrics = {'accuracy': acc, 'classification_report': report, 'confusion_matrix': cm.tolist(), 'model_classes': model.classes_.tolist()}
+    # Estrutura padronizada com best_model e results (igual ao notebook)
+    metrics = {
+        'best_model': 'LinearSVC',  # Como só avaliamos um modelo, definimos como melhor
+        'results': {
+            'LinearSVC': {
+                'accuracy': acc,
+                'f1_macro': report['macro avg']['f1-score'],
+                'train_time_seconds': 0,  # Não temos essa info no script de avaliação
+                'predict_time_seconds': 0,  # Não temos essa info no script de avaliação
+                'classification_report': report,
+                'confusion_matrix': cm.tolist()
+            }
+        },
+        'model_classes': model.classes_.tolist()
+    }
 
     if has_probs and probs is not None and probs.shape[1] == len(model.classes_):
         if len(model.classes_) == 2:

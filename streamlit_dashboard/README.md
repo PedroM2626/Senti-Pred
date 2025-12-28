@@ -12,6 +12,35 @@ Este README documenta o dashboard em Streamlit que exibe as métricas e visualiz
 - **NOVO**: Suporte a predição em lote via upload de CSV com análise de distribuição e download dos resultados.
 - Arquivo principal: `streamlit_dashboard/app.py`.
 
+## Estrutura do JSON de Métricas
+
+O dashboard espera o arquivo `reports/metrics/model_metrics.json` com a seguinte estrutura:
+
+```json
+{
+  "best_model": "LinearSVC",
+  "results": {
+    "LinearSVC": {
+      "accuracy": 0.938,
+      "f1_macro": 0.937,
+      "classification_report": {
+        "Positive": {"precision": 0.929, "recall": 0.939, "f1-score": 0.934, "support": 285},
+        "Negative": {"precision": 0.921, "recall": 0.962, "f1-score": 0.941, "support": 266},
+        "macro avg": {"precision": 0.937, "recall": 0.938, "f1-score": 0.937, "support": 1008}
+      },
+      "confusion_matrix": [[...]]
+    }
+  },
+  "model_classes": ["Positive", "Negative", "Neutral", "Irrelevant"]
+}
+```
+
+O dashboard exibe:
+- **Melhor modelo** (do campo `best_model`)
+- **Acurácia global** (do campo `accuracy` dentro do modelo vencedor)
+- **Tabela de métricas por classe** (do `classification_report`)
+- **Média macro** dos valores
+
 ## Pré-requisitos
 
 - Python 3.8+
@@ -94,6 +123,7 @@ Senti-Pred/
 ## Mensagens e Erros Comuns
 
 - "Arquivo de métricas não encontrado": execute `03_modeling.py` e/ou `04_evaluation.py` para gerar `reports/metrics/model_metrics.json`.
+- "Estrutura JSON inválida": o dashboard espera a estrutura com `best_model` e `results`. Execute `04_evaluation.py` para garantir a estrutura correta.
 - "Visualização não encontrada": verifique se os PNGs existem em `reports/visualizacoes/`. Rode `03_modeling.py` para gerar comparativos.
 - "Modelo não encontrado": execute `03_modeling.py` para treinar e salvar o modelo em `src/models/sentiment_model.pkl`.
 - Permissões/paths: assegure-se de executar os comandos a partir da raiz do projeto ou ajuste os caminhos conforme indicado acima.
@@ -101,7 +131,11 @@ Senti-Pred/
 ## Funcionalidades
 
 ### 1. Métricas e Visualizações
-- Tabela comparativa de modelos com accuracy, F1-score, ROC-AUC, etc.- Gráficos ROC, Precision-Recall e Matrizes de Confusão comparativas
+- **Melhor modelo** identificado automaticamente (ex: "LinearSVC")
+- **Acurácia global** e **F1-score macro** do modelo vencedor
+- **Tabela de métricas por classe** (precision, recall, f1-score, support)
+- **Média macro** dos valores por classe
+- Gráficos ROC, Precision-Recall e Matrizes de Confusão comparativas
 - Visualização completa do JSON de métricas
 
 ### 2. Predição Interativa
