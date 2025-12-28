@@ -41,15 +41,17 @@ O projeto pode ser executado de três maneiras principais, cada uma com sua pró
     -   **Deploy Online**: O dashboard está disponível publicamente em: [Senti-Pred EDA Dashboard](https://pedrom2626.shinyapps.io/r_shiny/)
 
 2.  **Dashboard de Métricas Streamlit**: Para visualizar as métricas de avaliação do modelo de forma interativa.
+    -   **NOVO**: Agora permite predição interativa de textos e predição em lote via upload de CSV
     -   **Deploy Online**: O dashboard está disponível publicamente em: [Senti-Pred Metrics Dashboard](https://senti-pred-dashboard.streamlit.app/)
     -   **Execução Local (resumo)**:
-        1.  Instale dependências: `pip install -r requirements.txt` (ou somente `pip install streamlit pandas pillow`).
+        1.  Instale dependências: `pip install -r requirements.txt` (ou somente `pip install streamlit pandas pillow joblib scikit-learn`).
         2.  Gere artefatos do pipeline:
             - `python src/scripts/02_preprocessing.py`
-            - `python src/scripts/03_modeling.py`
+            - `python src/scripts/03_modeling.py` (gera também o modelo para predições)
             - Opcional: `python src/scripts/04_evaluation.py`
         3.  Navegue até `streamlit_dashboard` e execute: `streamlit run app.py`
         4.  Alternativamente, pela raiz: `streamlit run streamlit_dashboard/app.py`
+    -   **Funcionalidades**: Métricas comparativas, visualizações, predição de texto único, predição em lote de CSV, download de resultados
     -   **Documentação Completa**: veja `streamlit_dashboard/README.md` para detalhes, estrutura esperada e troubleshooting.
 
 3.  **Agente de Geração de Testes Unitários**: Para gerar automaticamente testes unitários para código Python usando IA.

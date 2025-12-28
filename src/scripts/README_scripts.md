@@ -169,9 +169,9 @@ Execute o download manual dos pacotes NLTK conforme mostrado acima
 ## Integração com Outros Componentes
 
 Os modelos e métricas gerados podem ser usados por:
-- **Dashboard Streamlit:** `streamlit_dashboard/app.py`
+- **Dashboard Streamlit:** `streamlit_dashboard/app.py` (agora com predição interativa e em lote)
 - **API Django:** `src/api/views.py`
-- **Dashboard R Shiny:** `r_shiny/app.R`
+- **Dashboard R Shiny:** `r_shiny/app.py`
 
 ## Contribuição
 

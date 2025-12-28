@@ -8,6 +8,8 @@ Este README documenta o dashboard em Streamlit que exibe as métricas e visualiz
 
 - O dashboard lê o arquivo `reports/metrics/model_metrics.json` e mostra um resumo do melhor modelo e uma tabela com as métricas por algoritmo.
 - Exibe imagens geradas pelo pipeline em `reports/visualizacoes/` (curvas ROC, PR e matrizes de confusão comparativas).
+- **NOVO**: Permite predição interativa de sentimentos com o modelo treinado.
+- **NOVO**: Suporte a predição em lote via upload de CSV com análise de distribuição e download dos resultados.
 - Arquivo principal: `streamlit_dashboard/app.py`.
 
 ## Pré-requisitos
@@ -28,7 +30,7 @@ Alternativamente, apenas para o dashboard:
 pip install streamlit pandas pillow
 ```
 
-## Preparação dos Artefatos (métricas e imagens)
+## Preparação dos Artefatos (métricas, imagens e modelo)
 
 O dashboard depende de arquivos gerados pelos scripts do pipeline. Execute em ordem:
 
@@ -43,6 +45,7 @@ O dashboard depende de arquivos gerados pelos scripts do pipeline. Execute em or
    python src/scripts/03_modeling.py
    ```
    - Gera `reports/metrics/model_metrics.json` e imagens em `reports/visualizacoes/`.
+   - Gera `src/models/sentiment_model.pkl` (necessário para predições).
 
 3. Avaliação (opcional, complementa métricas e imagens)
    ```bash
@@ -80,6 +83,9 @@ Senti-Pred/
 │       ├── comparison_roc.png
 │       ├── comparison_pr.png
 │       └── comparison_confusion_matrices.png
+├── src/
+│   └── models/
+│       └── sentiment_model.pkl (necessário para predições)
 └── data/
     └── processed/
         └── processed_data.pkl
@@ -89,12 +95,31 @@ Senti-Pred/
 
 - "Arquivo de métricas não encontrado": execute `03_modeling.py` e/ou `04_evaluation.py` para gerar `reports/metrics/model_metrics.json`.
 - "Visualização não encontrada": verifique se os PNGs existem em `reports/visualizacoes/`. Rode `03_modeling.py` para gerar comparativos.
+- "Modelo não encontrado": execute `03_modeling.py` para treinar e salvar o modelo em `src/models/sentiment_model.pkl`.
 - Permissões/paths: assegure-se de executar os comandos a partir da raiz do projeto ou ajuste os caminhos conforme indicado acima.
+
+## Funcionalidades
+
+### 1. Métricas e Visualizações
+- Tabela comparativa de modelos com accuracy, F1-score, ROC-AUC, etc.- Gráficos ROC, Precision-Recall e Matrizes de Confusão comparativas
+- Visualização completa do JSON de métricas
+
+### 2. Predição Interativa
+- Digite um texto e obtenha a predição de sentimento (Positivo, Negativo, Neutro)
+- Exibição de confiança aproximada da predição
+- Cores visuais para diferenciar sentimentos (verde=positivo, vermelho=negativo, azul=neutro)
+
+### 3. Predição em Lote
+- Upload de arquivo CSV com coluna 'text'
+- Predição automática de múltiplos textos
+- Visualização da distribuição de sentimentos previstos
+- Download dos resultados completos em CSV
 
 ## Customização
 
 - Edite `streamlit_dashboard/app.py` para alterar colunas exibidas, legendas e caminhos das imagens.
 - Os gráficos são salvos pelos scripts em `reports/visualizacoes/`. Para incluir novos gráficos, gere-os nos scripts e referencie-os no dashboard.
+- O modelo de predição pode ser alterado editando o caminho `MODEL_PATH` no arquivo.
 
 ## Deploy com Docker (Recomendado)
 

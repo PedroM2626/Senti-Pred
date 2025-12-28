@@ -3,6 +3,8 @@ import streamlit as st
 import json
 import pandas as pd
 from PIL import Image
+import numpy as np
+import joblib
 
 st.set_page_config(layout="wide")
 
@@ -16,6 +18,7 @@ Este dashboard apresenta as métricas de avaliação e as visualizações gerada
 BASE = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 METRICS_PATH = os.path.join(BASE, 'reports', 'metrics', 'model_metrics.json')
 VIS_DIR = os.path.join(BASE, 'reports', 'visualizacoes')
+MODEL_PATH = os.path.join(BASE, 'src', 'models', 'sentiment_model.pkl')
 
 if not os.path.exists(METRICS_PATH):
     st.error("Arquivo de métricas 'reports/metrics/model_metrics.json' não encontrado. Execute `03_modeling.py` e `04_evaluation.py` para gerar métricas.")
@@ -70,3 +73,86 @@ else:
 
 st.header('Relatório completo (JSON)')
 st.json(metrics)
+
+# Predição com o modelo (texto único)
+st.header('Predição com o Modelo')
+if not os.path.exists(MODEL_PATH):
+    st.error("Modelo não encontrado em 'src/models/sentiment_model.pkl'. Execute `03_modeling.py` para treinar e salvar o modelo.")
+else:
+    @st.cache_resource
+    def _load_model(path: str):
+        return joblib.load(path)
+
+    model = _load_model(MODEL_PATH)
+
+    texto = st.text_area("Digite um texto para análise de sentimento", "")
+    if st.button("Prever sentimento"):
+        t = (texto or "").strip()
+        if not t:
+            st.warning("Digite um texto válido para realizar a predição.")
+        else:
+            try:
+                pred = model.predict([t])[0]
+                conf = None
+                try:
+                    scores = model.decision_function([t])
+                    s = np.array(scores)[0]
+                    exps = np.exp(s - np.max(s))
+                    probs = exps / exps.sum()
+                    conf = float(probs.max())
+                except Exception:
+                    pass
+
+                label = str(pred)
+                if label.lower().startswith("pos"):
+                    st.success(f"Sentimento: {label}" + (f" — confiança≈{conf:.2f}" if conf is not None else ""))
+                elif label.lower().startswith("neg"):
+                    st.error(f"Sentimento: {label}" + (f" — confiança≈{conf:.2f}" if conf is not None else ""))
+                else:
+                    st.info(f"Sentimento: {label}" + (f" — confiança≈{conf:.2f}" if conf is not None else ""))
+            except Exception as e:
+                st.exception(e)
+
+# Predição em lote (upload de CSV)
+st.header('Predição em Lote (CSV)')
+if not os.path.exists(MODEL_PATH):
+    st.info("Para usar predições em lote, gere o modelo primeiro com `03_modeling.py`.")
+else:
+    upload = st.file_uploader("Envie um CSV com a coluna 'text'", type=['csv'])
+    if upload is not None:
+        try:
+            df_in = pd.read_csv(upload)
+        except Exception as e:
+            st.error(f"Não foi possível ler o CSV: {e}")
+            df_in = None
+
+        if df_in is not None:
+            if 'text' not in df_in.columns:
+                st.error("CSV deve conter a coluna 'text'.")
+            else:
+                model = _load_model(MODEL_PATH)
+                texts = df_in['text'].astype(str).fillna("")
+                try:
+                    preds = model.predict(texts.tolist())
+                except Exception as e:
+                    st.exception(e)
+                    preds = None
+
+                if preds is not None:
+                    df_out = df_in.copy()
+                    df_out['predicted_sentiment'] = preds
+                    st.subheader("Amostra das predições")
+                    st.dataframe(df_out.head(300))
+
+                    st.subheader("Distribuição de sentimentos previstos")
+                    counts = pd.Series(preds).value_counts().reset_index()
+                    counts.columns = ['sentiment', 'count']
+                    st.bar_chart(counts.set_index('sentiment'))
+
+                    csv_bytes = df_out.to_csv(index=False).encode('utf-8')
+                    st.download_button(
+                        label="Baixar resultados (CSV)",
+                        data=csv_bytes,
+                        file_name="predictions.csv",
+                        mime="text/csv"
+                    )
