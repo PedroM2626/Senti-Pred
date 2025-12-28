@@ -89,6 +89,13 @@ def find_raw_files():
         return files[0], files[1]
     return files[0], None
 
+def load_processed():
+    p = PROCESSED_DIR / 'processed_data.pkl'
+    if not p.exists():
+        raise FileNotFoundError(f'Processed data not found: {p}. Execute 02_preprocessing.py first')
+    obj = joblib.load(p)
+    return obj['train'], obj.get('validation', pd.DataFrame())
+
 def run_preprocessing():
     train_path, val_path = find_raw_files()
     cols = ['tweet_id', 'entity', 'sentiment', 'text']

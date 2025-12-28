@@ -139,7 +139,8 @@ def train_and_evaluate():
             'classification_report': results[k]['report'],
             'confusion_matrix': results[k]['confusion_matrix']
         }
-    (METRICS_DIR / 'model_metrics.json').write_text(pd.io.json.dumps(metrics_out, indent=2))
+    import json
+    (METRICS_DIR / 'model_metrics.json').write_text(json.dumps(metrics_out, indent=2))
     print(f'[OK] Metrics saved to {METRICS_DIR / "model_metrics.json"}')
 
     # comparison plots (ROC, PR, confusion side-by-side)

@@ -34,11 +34,13 @@ O projeto pode ser executado de três maneiras principais, cada uma com sua pró
 3.  **GCP Vertex AI + Docker**: Para deploy em ambiente de produção utilizando a infraestrutura do Google Cloud Platform e Docker.
     -   Veja o guia completo em: [README_gcp.md](README_gcp.md)
 
-4.  **Dashboard Interativo R Shiny**: Para análise exploratória de dados (EDA) interativa dos dados brutos, processados e de previsão.
+## Materiais Complementares
+
+1.  **Dashboard Interativo R Shiny**: Para análise exploratória de dados (EDA) interativa dos dados brutos, processados e de previsão.
     -   Veja o guia completo em: [README_r.md](README_r.md)
     -   **Deploy Online**: O dashboard está disponível publicamente em: [Senti-Pred EDA Dashboard](https://pedrom2626.shinyapps.io/r_shiny/)
 
-5.  **Dashboard de Métricas Streamlit**: Para visualizar as métricas de avaliação do modelo de forma interativa.
+2.  **Dashboard de Métricas Streamlit**: Para visualizar as métricas de avaliação do modelo de forma interativa.
     -   **Deploy Online**: O dashboard está disponível publicamente em: [Senti-Pred Metrics Dashboard](https://senti-pred-dashboard.streamlit.app/)
     -   **Execução Local (resumo)**:
         1.  Instale dependências: `pip install -r requirements.txt` (ou somente `pip install streamlit pandas pillow`).
@@ -49,6 +51,10 @@ O projeto pode ser executado de três maneiras principais, cada uma com sua pró
         3.  Navegue até `streamlit_dashboard` e execute: `streamlit run app.py`
         4.  Alternativamente, pela raiz: `streamlit run streamlit_dashboard/app.py`
     -   **Documentação Completa**: veja `streamlit_dashboard/README.md` para detalhes, estrutura esperada e troubleshooting.
+
+3.  **Agente de Geração de Testes Unitários**: Para gerar automaticamente testes unitários para código Python usando IA.
+    -   **Funcionalidade**: Gera testes unitários abrangentes usando Azure OpenAI e pytest
+    -   **Documentação Completa**: veja `test_agent/README.md` para instruções detalhadas de uso e configuração.
 
 ## Estrutura do Projeto
 
@@ -64,6 +70,14 @@ senti-pred/
 │   └── processed/ (dados processados)
 ├── r_shiny/
 │   └── app.R (Aplicativo R Shiny)
+├── streamlit_dashboard/
+│   ├── app.py (Dashboard Streamlit)
+│   └── README.md (Documentação do dashboard)
+├── test_agent/
+│   ├── agent.py (Agente de geração de testes)
+│   ├── example_code.py (Código de exemplo)
+│   ├── requirements.txt (Dependências do agente)
+│   └── README.md (Documentação do agente)
 ├── full_pipeline.ipynb (Pipeline completo) 
 ├── src/
 │   ├── models/ (código dos modelos)
@@ -124,40 +138,3 @@ senti-pred/
 ## Licença
 
 Este projeto está licenciado sob a licença MIT - veja o arquivo LICENSE para detalhes.
-
-## Agente de Geração de Testes Unitários
-
-Este projeto inclui um agente de IA que gera testes unitários para código Python usando a biblioteca `pytest` e o Azure OpenAI.
-
-### Como Usar o Agente de Testes
-
-1.  **Configurar Variáveis de Ambiente**:
-    Crie um arquivo `.env` no diretório `test_agent` (se ainda não existir) e adicione as seguintes variáveis, substituindo os valores pelos seus dados do Azure OpenAI:
-
-    ```
-    AZURE_OPENAI_ENDPOINT=your_azure_openai_endpoint
-    AZURE_OPENAI_API_KEY=your_azure_openai_api_key
-    AZURE_OPENAI_DEPLOYMENT_NAME=your_azure_openai_deployment_name
-    ```
-
-    Você pode usar o arquivo `.env.example` como base.
-
-2.  **Preparar o Código para Testar**:
-    Coloque o código Python para o qual você deseja gerar testes no arquivo `example_code.py` dentro do diretório `test_agent`.
-
-3.  **Executar o Agente**:
-    Navegue até o diretório `test_agent` e execute o script `agent.py`:
-
-    ```bash
-    cd test_agent
-    python agent.py
-    ```
-
-    O agente irá gerar um arquivo de testes chamado `test_example_code.py` no mesmo diretório.
-
-4.  **Rodar os Testes Gerados**:
-    Para executar os testes gerados, certifique-se de ter o `pytest` instalado (`pip install pytest`) e execute:
-
-    ```bash
-    pytest test_example_code.py
-    ```
