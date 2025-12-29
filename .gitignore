@@ -24,9 +24,6 @@ thumbs.db
 venv/
 env/
 
-# Model files
-*.pkl
-
 # Environment variables
 .env
 
